@@ -4,7 +4,7 @@ import { z } from 'zod';
 dotenv.config();
 
 const envSchema = z.object({
-  SAMPLE_ENV_VAR: z.string().transform(Number),
+  GAMMA_API_URL: z.string().url(),
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
     .default('development'),
