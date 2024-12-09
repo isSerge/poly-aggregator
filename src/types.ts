@@ -16,7 +16,6 @@ export interface StreamlinedChildMarket {
   outcomes: string[];                    // Parsed outcomes array
   outcomePrices: number[];               // Parsed outcome prices
   volume: number;                        // Volume in numeric format
-  active: boolean;                       // Active status
 }
 
 

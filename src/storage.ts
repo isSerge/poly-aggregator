@@ -22,8 +22,6 @@ const ChildMarketSchema = z.object({
     outcomes: z.array(z.string()),        // Parsed outcomes array
     outcomePrices: z.array(z.string()),   // Parsed outcome prices
     volume: z.number(),                    // Volume in numeric format
-    active: z.boolean().optional(),        // Active status (optional)
-    closed: z.boolean().optional(),        // Closed status (optional)
 });
 
 // Validate data using Zod (optional but recommended for safety)

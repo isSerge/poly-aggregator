@@ -31,9 +31,9 @@ export const toStreamlinedMarket = (apiResponse: ApiParentMarket): StreamlinedPa
                 outcomes: JSON.parse(market.outcomes),
                 outcomePrices: JSON.parse(market.outcomePrices),
                 volume: parseFloat(market.volume),
-                active: market.active,
-                closed: market.closed,
                 //  Probably redundant fields:
+                // active: market.active,
+                // closed: market.closed,
                 // conditionId: market.conditionId,
                 // slug: market.slug,
                 // description: market.description,
