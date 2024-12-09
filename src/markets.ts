@@ -7,7 +7,6 @@ export const toStreamlinedMarket = (apiResponse: ApiParentMarket): StreamlinedPa
     return {
         id: apiResponse.id,
         title: apiResponse.title,
-        description: apiResponse.description,
         startDate: apiResponse.startDate,
         endDate: apiResponse.endDate,
         active: apiResponse.active,
@@ -15,6 +14,7 @@ export const toStreamlinedMarket = (apiResponse: ApiParentMarket): StreamlinedPa
         liquidity: apiResponse.liquidity,
         volume: apiResponse.volume,
         //   Probably redundant fields:
+        //   description: apiResponse.description,
         //   ticker: apiResponse.ticker,
         //   slug: apiResponse.slug,
         //   image: apiResponse.image,

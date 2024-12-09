@@ -16,6 +16,16 @@ async function ensureFolderExists(folder: string): Promise<void> {
     }
 }
 
+const ChildMarketSchema = z.object({
+    id: z.string(),                        // Unique identifier
+    question: z.string(),                  // Market-specific question
+    outcomes: z.array(z.string()),        // Parsed outcomes array
+    outcomePrices: z.array(z.string()),   // Parsed outcome prices
+    volume: z.number(),                    // Volume in numeric format
+    active: z.boolean().optional(),        // Active status (optional)
+    closed: z.boolean().optional(),        // Closed status (optional)
+});
+
 // Validate data using Zod (optional but recommended for safety)
 const MarketDataSchema = z.array(
     z.object({
@@ -28,17 +38,7 @@ const MarketDataSchema = z.array(
         closed: z.boolean(),                   // Closed status
         liquidity: z.number(),                 // Total liquidity
         volume: z.number(),                    // Total volume
-        childMarkets: z.array(
-            z.object({
-                id: z.string(),                        // Unique identifier
-                question: z.string(),                  // Market-specific question
-                outcomes: z.array(z.string()),        // Parsed outcomes array
-                outcomePrices: z.array(z.string()),   // Parsed outcome prices
-                volume: z.number(),                    // Volume in numeric format
-                active: z.boolean().optional(),        // Active status (optional)
-                closed: z.boolean().optional(),        // Closed status (optional)
-            })
-        ).optional(),                             // Child markets are optional
+        childMarkets: z.array(ChildMarketSchema).optional(),                             // Child markets are optional
     })
 );
 
