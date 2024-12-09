@@ -50,8 +50,8 @@ async function writeJSON(filename: string, data: any): Promise<void> {
         await fs.rename(tempFile, filename); // Replace the original file
         console.log(`Successfully wrote to ${filename}`);
     } catch (error) {
-         // Handle both Error and non-Error exceptions
-         if (error instanceof Error) {
+        // Handle both Error and non-Error exceptions
+        if (error instanceof Error) {
             console.error(`Error writing to ${filename}:`, error.message);
         } else {
             console.error(`Error writing to ${filename}:`, String(error));
@@ -66,13 +66,11 @@ async function readJSON<T>(filename: string): Promise<T[]> {
         const file = await fs.readFile(filename, 'utf-8');
         const data = JSON.parse(file);
 
-        // Optional: Validate the data
-        if (MarketDataSchema.safeParse(data).success) {
-            return data;
-        } else {
-            console.warn(`Invalid data structure in ${filename}. Returning an empty array.`);
-            return [];
+        if (!MarketDataSchema.safeParse(data).success) {
+            throw new Error(`Invalid data structure found in ${filename}`);
         }
+
+        return data;
     } catch (error) {
         if (error instanceof Error && (error as any).code === 'ENOENT') {
             console.warn(`File ${filename} not found, returning empty array.`);
@@ -85,7 +83,9 @@ async function readJSON<T>(filename: string): Promise<T[]> {
 // Append new data to an existing JSON file
 async function appendToJSON(filename: string, newData: any[]): Promise<void> {
     const existingData = await readJSON<any[]>(filename);
-    const mergedData = mergeData(existingData, newData);
+    const mergedData = mergeData(existingData, newData).filter(
+        (item, index, self) => index === self.findIndex(t => t.id === item.id)
+    );
     await writeJSON(filename, mergedData);
 }
 
@@ -103,7 +103,7 @@ export async function saveCurrentData(data: any[]): Promise<void> {
     await ensureFolderExists(DATA_FOLDER);
 
     // console.log(data[0].childMarkets);
-    
+
     // Validate data before saving
     const validationResult = MarketDataSchema.safeParse(data);
 
@@ -122,15 +122,24 @@ export async function getCurrentData(): Promise<any[]> {
 
 export async function saveHistoricalData(data: any[]): Promise<void> {
     await ensureFolderExists(DATA_FOLDER);
-    
-    // Validate data before saving
+
+    // Validate the new data before merging it with historical data
     const validationResult = MarketDataSchema.safeParse(data);
     if (!validationResult.success) {
         console.error(`Data validation failed for historical data:`, validationResult.error);
         throw new Error(`Invalid data structure for historical data`);
     }
 
-    await appendToJSON(HISTORICAL_FILE, data);
+    // Fetch existing historical data
+    const existingData = await getHistoricalData();
+
+    // Merge and deduplicate data
+    const mergedData = mergeData(existingData, data).filter(
+        (item, index, self) => index === self.findIndex(t => t.id === item.id) // Deduplicate by ID
+    );
+
+    // Write the updated historical data back to the file
+    await writeJSON(HISTORICAL_FILE, mergedData);
 }
 
 export async function getHistoricalData(): Promise<any[]> {
