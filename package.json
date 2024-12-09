@@ -19,7 +19,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@langchain/google-genai": "^0.1.5",
     "dotenv": "^16.4.7",
+    "langchain": "^0.3.6",
     "pino": "^9.5.0",
     "pino-pretty": "^13.0.0",
     "undici": "^6.21.0",

@@ -1,7 +1,7 @@
 import { logger } from './logger.js';
 import { fetchCryptoMarkets } from './markets.js';
 import { saveCurrentData, getCurrentData, saveHistoricalData, getHistoricalData } from './storage.js';
-// import { analyzeWithLLM } from './llm.js'; // Import the LLM interaction module
+import { analyzeTrendsWithLLM } from './llm.js';
 
 export async function main() {
   try {
@@ -23,9 +23,15 @@ export async function main() {
     // Step 3: Load historical data
     const historicalMarkets = await getHistoricalData();
 
-    // Step 4: Feed data to LLM for analysis
+    // If there is no historical data, skip the analysis
+    if (historicalMarkets && historicalMarkets.length > 0) {
+      // Step 4: Feed data to LLM for analysis
+      const analysis = await analyzeTrendsWithLLM(currentMarkets, historicalMarkets);
+  
+      logger.info('Analysis completed:');
+      logger.info(analysis.content);
+    }
 
-    logger.info('LLM Analysis Result:')
     // Step 5: Update historical data after feeding it to LLM
     const updatedHistoricalData = [...historicalMarkets, ...currentMarkets];
     await saveHistoricalData(updatedHistoricalData);

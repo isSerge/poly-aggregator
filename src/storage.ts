@@ -1,11 +1,13 @@
+import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
 import { handleError } from './utils.js';
-import { StreamlinedParentMarket, StreamlinedParentMarketArraySchema  } from './types.js';
+import { StreamlinedParentMarket, StreamlinedParentMarketArraySchema } from './types.js';
 
 // Define paths
-const DATA_FOLDER = path.join(path.dirname(import.meta.url), '../data');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DATA_FOLDER = path.join(__dirname, '../data');
 const CURRENT_FILE = path.join(DATA_FOLDER, 'current.json');
 const HISTORICAL_FILE = path.join(DATA_FOLDER, 'historical.json');
 const TEMP_SUFFIX = '.tmp';
