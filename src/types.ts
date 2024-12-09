@@ -78,3 +78,7 @@ export interface ApiTag {
   updatedAt: string;               // Last update timestamp
 }
 
+export const isApiParentMarketArray = (data: any): data is ApiParentMarket[] => {
+    return Array.isArray(data) && data.every(item => 'id' in item && 'title' in item); // Add more checks as needed
+};
+

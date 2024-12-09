@@ -2,6 +2,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
 import { z } from 'zod';
+import { StreamlinedParentMarket } from './types.js';
+import { handleError } from './utils.js';
 
 // Define paths
 const DATA_FOLDER = path.join(path.dirname(import.meta.url), '../data');
@@ -41,19 +43,14 @@ const MarketDataSchema = z.array(
 );
 
 // Write data to a JSON file (atomic)
-async function writeJSON(filename: string, data: any): Promise<void> {
+async function writeJSON(filename: string, data: StreamlinedParentMarket[]): Promise<void> {
     try {
         const tempFile = filename + TEMP_SUFFIX;
         await fs.writeFile(tempFile, JSON.stringify(data, null, 2));
         await fs.rename(tempFile, filename); // Replace the original file
         console.log(`Successfully wrote to ${filename}`);
     } catch (error) {
-        // Handle both Error and non-Error exceptions
-        if (error instanceof Error) {
-            console.error(`Error writing to ${filename}:`, error.message);
-        } else {
-            console.error(`Error writing to ${filename}:`, String(error));
-        }
+        handleError(error, `Error writing to ${filename}`);
         throw error;
     }
 }
@@ -70,25 +67,24 @@ async function readJSON<T>(filename: string): Promise<T[]> {
 
         return data;
     } catch (error) {
-        if (error instanceof Error && (error as any).code === 'ENOENT') {
+        if (error instanceof Error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
             console.warn(`File ${filename} not found, returning empty array.`);
             return [];
         }
+        handleError(error, `Error reading from ${filename}`);
         throw error;
     }
 }
 
 // Helper function to merge data (by `id`)
-function mergeData(existingData: any[], newData: any[]): any[] {
+function mergeData(existingData: StreamlinedParentMarket[], newData: StreamlinedParentMarket[]): StreamlinedParentMarket[] {
     const existingMap = new Map(existingData.map(item => [item.id, item]));
-    newData.forEach(item => {
-        existingMap.set(item.id, item); // Overwrite or add new data
-    });
+    newData.forEach(item => existingMap.set(item.id, item)); // Overwrite or add new data
     return Array.from(existingMap.values());
 }
 
 // Exported methods
-export async function saveCurrentData(data: any[]): Promise<void> {
+export async function saveCurrentData(data: StreamlinedParentMarket[]): Promise<void> {
     await ensureFolderExists(DATA_FOLDER);
 
     // console.log(data[0].childMarkets);
@@ -104,12 +100,12 @@ export async function saveCurrentData(data: any[]): Promise<void> {
     await writeJSON(CURRENT_FILE, data);
 }
 
-export async function getCurrentData(): Promise<any[]> {
+export async function getCurrentData(): Promise<StreamlinedParentMarket[]> {
     await ensureFolderExists(DATA_FOLDER);
     return await readJSON(CURRENT_FILE);
 }
 
-export async function saveHistoricalData(data: any[]): Promise<void> {
+export async function saveHistoricalData(data: StreamlinedParentMarket[]): Promise<void> {
     await ensureFolderExists(DATA_FOLDER);
 
     // Validate the new data before merging it with historical data
@@ -131,7 +127,7 @@ export async function saveHistoricalData(data: any[]): Promise<void> {
     await writeJSON(HISTORICAL_FILE, mergedData);
 }
 
-export async function getHistoricalData(): Promise<any[]> {
+export async function getHistoricalData(): Promise<StreamlinedParentMarket[]> {
     await ensureFolderExists(DATA_FOLDER);
     return await readJSON(HISTORICAL_FILE);
 }
