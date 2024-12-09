@@ -23,7 +23,7 @@ const MarketDataSchema = z.array(
         title: z.string(),                     // Market title/question
         description: z.string().optional(),    // (Optional) Context of the market
         startDate: z.string().optional(),      // (Optional) ISO string
-        endDate: z.string(),                   // ISO string
+        endDate: z.string().optional(),        // (Optional) ISO string
         active: z.boolean(),                   // Active status
         closed: z.boolean(),                   // Closed status
         liquidity: z.number(),                 // Total liquidity
