@@ -1,11 +1,11 @@
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { config } from './config.js';
-import { StreamlinedParentMarket } from './types.js';
+import { StreamlinedParentMarket, StreamlinedChildMarket } from './types.js';
 
 const llm = new ChatGoogleGenerativeAI({
-    model: 'gemini-1.5-flash',
-    temperature: 0.7,
-    apiKey: config.GEMINI_API_KEY,
+  model: 'gemini-1.5-flash',
+  temperature: 0.7,
+  apiKey: config.GEMINI_API_KEY,
 });
 
 /**
@@ -14,29 +14,44 @@ const llm = new ChatGoogleGenerativeAI({
  * @param {StreamlinedParentMarket[]} historicalMarkets - Array of historical market data
  * @returns {string} - Formatted prompt for the LLM
  */
-function formatPrompt(currentMarkets: StreamlinedParentMarket[], historicalMarkets: StreamlinedParentMarket[]): string {
-    return `
+function formatPrompt(
+  currentMarkets: StreamlinedParentMarket[],
+  historicalMarkets: StreamlinedParentMarket[]
+): string {
+  return `
         ### Current Market Data ###
-        ${currentMarkets.map((market: any) => `
+        ${currentMarkets
+          .map(
+            (market: StreamlinedParentMarket) => `
         - Market ID: ${market.id}
         - Title: ${market.title}
         - Liquidity: ${market.liquidity}
         - Volume: ${market.volume}
         - Child Markets:
-        ${market.childMarkets?.map((child: any) => `
+        ${market.childMarkets
+          ?.map(
+            (child: StreamlinedChildMarket) => `
         * ${child.question}
-            - Outcome Prices: ${child.outcomePrices.join(', ')}
+            - Outcome Prices: ${child.outcomePrices.map((price) => price.toString()).join(', ')}
             - Volume: ${child.volume}
-        `).join('')}
-        `).join('\n')}
+        `
+          )
+          .join('')}
+        `
+          )
+          .join('\n')}
 
         ### Historical Market Data ###
-        ${historicalMarkets.map((market: any) => `
+        ${historicalMarkets
+          .map(
+            (market: StreamlinedParentMarket) => `
         - Market ID: ${market.id}
         - Title: ${market.title}
         - Liquidity: ${market.liquidity}
         - Volume: ${market.volume}
-        `).join('\n')}
+        `
+          )
+          .join('\n')}
 
         ### Task ###
         Compare the current market data to the historical market data and describe trends. 
@@ -53,10 +68,13 @@ function formatPrompt(currentMarkets: StreamlinedParentMarket[], historicalMarke
  * @param {StreamlinedParentMarket[]} historicalMarkets - Array of historical market data
  * @returns {Promise<string>} - Analysis result
  */
-export async function analyzeTrendsWithLLM(currentMarkets: StreamlinedParentMarket[], historicalMarkets: StreamlinedParentMarket[]) {
-    const prompt = formatPrompt(currentMarkets, historicalMarkets);
+export async function analyzeTrendsWithLLM(
+  currentMarkets: StreamlinedParentMarket[],
+  historicalMarkets: StreamlinedParentMarket[]
+) {
+  const prompt = formatPrompt(currentMarkets, historicalMarkets);
 
-    const response = await llm.invoke(prompt);
+  const response = await llm.invoke(prompt);
 
-    return response
+  return response;
 }
