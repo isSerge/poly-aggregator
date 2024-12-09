@@ -80,15 +80,6 @@ async function readJSON<T>(filename: string): Promise<T[]> {
     }
 }
 
-// Append new data to an existing JSON file
-async function appendToJSON(filename: string, newData: any[]): Promise<void> {
-    const existingData = await readJSON<any[]>(filename);
-    const mergedData = mergeData(existingData, newData).filter(
-        (item, index, self) => index === self.findIndex(t => t.id === item.id)
-    );
-    await writeJSON(filename, mergedData);
-}
-
 // Helper function to merge data (by `id`)
 function mergeData(existingData: any[], newData: any[]): any[] {
     const existingMap = new Map(existingData.map(item => [item.id, item]));
