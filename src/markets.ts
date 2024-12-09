@@ -20,7 +20,7 @@ export const toStreamlinedMarket = (apiResponse: ApiParentMarket): StreamlinedPa
                 id: market.id,
                 question: market.question,
                 outcomes: safeJSONParse<string[]>(market.outcomes) || [],
-                outcomePrices: safeJSONParse<number[]>(market.outcomePrices) || [],
+                outcomePrices: safeJSONParse<string[]>(market.outcomePrices) || [],
                 volume: parseFloat(market.volume),
             })),
     };
@@ -54,7 +54,7 @@ export async function fetchCryptoMarkets(): Promise<StreamlinedParentMarket[]> {
         }
 
         if (!isApiParentMarketArray(data)) {
-            throw new Error('Invalid API response format: Expected an array');
+            throw new Error('Invalid API response format: Expected an array of ApiParentMarket');
         }
 
         return data.map(toStreamlinedMarket);

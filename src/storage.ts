@@ -1,9 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
-import { z } from 'zod';
-import { StreamlinedParentMarket } from './types.js';
 import { handleError } from './utils.js';
+import { StreamlinedParentMarket, StreamlinedParentMarketArraySchema  } from './types.js';
 
 // Define paths
 const DATA_FOLDER = path.join(path.dirname(import.meta.url), '../data');
@@ -17,30 +16,6 @@ async function ensureFolderExists(folder: string): Promise<void> {
         await fs.mkdir(folder, { recursive: true });
     }
 }
-
-const ChildMarketSchema = z.object({
-    id: z.string(),                        // Unique identifier
-    question: z.string(),                  // Market-specific question
-    outcomes: z.array(z.string()),        // Parsed outcomes array
-    outcomePrices: z.array(z.string()),   // Parsed outcome prices
-    volume: z.number(),                    // Volume in numeric format
-});
-
-// Validate data using Zod (optional but recommended for safety)
-const MarketDataSchema = z.array(
-    z.object({
-        id: z.string(),                        // Unique identifier
-        title: z.string(),                     // Market title/question
-        description: z.string().optional(),    // (Optional) Context of the market
-        startDate: z.string().optional(),      // (Optional) ISO string
-        endDate: z.string().optional(),        // (Optional) ISO string
-        active: z.boolean(),                   // Active status
-        closed: z.boolean(),                   // Closed status
-        liquidity: z.number(),                 // Total liquidity
-        volume: z.number(),                    // Total volume
-        childMarkets: z.array(ChildMarketSchema).optional(),                             // Child markets are optional
-    })
-);
 
 // Write data to a JSON file (atomic)
 async function writeJSON(filename: string, data: StreamlinedParentMarket[]): Promise<void> {
@@ -61,11 +36,12 @@ async function readJSON<T>(filename: string): Promise<T[]> {
         const file = await fs.readFile(filename, 'utf-8');
         const data = JSON.parse(file);
 
-        if (!MarketDataSchema.safeParse(data).success) {
+        // Validate against StreamlinedParentMarketSchema
+        if (!StreamlinedParentMarketArraySchema.safeParse(data).success) {
             throw new Error(`Invalid data structure found in ${filename}`);
         }
 
-        return data;
+        return data as T[]; // Cast to T[]
     } catch (error) {
         if (error instanceof Error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
             console.warn(`File ${filename} not found, returning empty array.`);
@@ -87,10 +63,8 @@ function mergeData(existingData: StreamlinedParentMarket[], newData: Streamlined
 export async function saveCurrentData(data: StreamlinedParentMarket[]): Promise<void> {
     await ensureFolderExists(DATA_FOLDER);
 
-    // console.log(data[0].childMarkets);
-
     // Validate data before saving
-    const validationResult = MarketDataSchema.safeParse(data);
+    const validationResult = StreamlinedParentMarketArraySchema.safeParse(data);
 
     if (!validationResult.success) {
         console.error(`Data validation failed for current data:`, validationResult.error);
@@ -109,7 +83,7 @@ export async function saveHistoricalData(data: StreamlinedParentMarket[]): Promi
     await ensureFolderExists(DATA_FOLDER);
 
     // Validate the new data before merging it with historical data
-    const validationResult = MarketDataSchema.safeParse(data);
+    const validationResult = StreamlinedParentMarketArraySchema.safeParse(data);
     if (!validationResult.success) {
         console.error(`Data validation failed for historical data:`, validationResult.error);
         throw new Error(`Invalid data structure for historical data`);
