@@ -23,22 +23,24 @@ export const toStreamlinedMarket = (apiResponse: ApiParentMarket): StreamlinedPa
         //   volume24hr: apiResponse.volume24hr,
         //   createdAt: apiResponse.createdAt,
         //   updatedAt: apiResponse.updatedAt,
-        childMarkets: apiResponse.markets.map((market) => ({
-            id: market.id,
-            question: market.question,
-            outcomes: JSON.parse(market.outcomes),
-            outcomePrices: JSON.parse(market.outcomePrices),
-            volume: parseFloat(market.volume),
-            active: market.active,
-            closed: market.closed,
-            //  Probably redundant fields:
-            // conditionId: market.conditionId,
-            // slug: market.slug,
-            // description: market.description,
-            // liquidity: parseFloat(market.liquidity || "0"),
-            // createdAt: market.createdAt,
-            // updatedAt: market.updatedAt,
-        })),
+        childMarkets: apiResponse.markets
+            .filter((market) => !market.closed)
+            .map((market) => ({
+                id: market.id,
+                question: market.question,
+                outcomes: JSON.parse(market.outcomes),
+                outcomePrices: JSON.parse(market.outcomePrices),
+                volume: parseFloat(market.volume),
+                active: market.active,
+                closed: market.closed,
+                //  Probably redundant fields:
+                // conditionId: market.conditionId,
+                // slug: market.slug,
+                // description: market.description,
+                // liquidity: parseFloat(market.liquidity || "0"),
+                // createdAt: market.createdAt,
+                // updatedAt: market.updatedAt,
+            })),
     };
 };
 
