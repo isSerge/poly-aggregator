@@ -120,6 +120,11 @@ export async function saveHistoricalData(
   await writeJSON(HISTORICAL_FILE, mergedData);
 }
 
+export async function getCurrentData(): Promise<StreamlinedParentMarket[]> {
+  await ensureFolderExists(DATA_FOLDER);
+  return await readJSON(CURRENT_FILE);
+}
+
 export async function getHistoricalData(): Promise<StreamlinedParentMarket[]> {
   await ensureFolderExists(DATA_FOLDER);
   return await readJSON(HISTORICAL_FILE);
