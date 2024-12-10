@@ -12,13 +12,30 @@ const llm = new ChatGoogleGenerativeAI({
  * Format the market data for LLM processing
  * @param {StreamlinedParentMarket[]} currentMarkets - Array of current market data
  * @param {StreamlinedParentMarket[]} historicalMarkets - Array of historical market data
+ * @param {string | null} latestReport - Latest LLM report
  * @returns {string} - Formatted prompt for the LLM
  */
 function formatPrompt(
   currentMarkets: StreamlinedParentMarket[],
-  historicalMarkets: StreamlinedParentMarket[]
+  historicalMarkets: StreamlinedParentMarket[],
+  latestReport: string | null
 ): string {
   return `
+        ### Previous Report ###
+        ${latestReport || 'No previous report found'}
+
+        ### Historical Market Data ###
+        ${historicalMarkets
+          .map(
+            (market: StreamlinedParentMarket) => `
+        - Market ID: ${market.id}
+        - Title: ${market.title}
+        - Liquidity: ${market.liquidity}
+        - Volume: ${market.volume}
+        `
+          )
+          .join('\n')}
+
         ### Current Market Data ###
         ${currentMarkets
           .map(
@@ -41,21 +58,10 @@ function formatPrompt(
           )
           .join('\n')}
 
-        ### Historical Market Data ###
-        ${historicalMarkets
-          .map(
-            (market: StreamlinedParentMarket) => `
-        - Market ID: ${market.id}
-        - Title: ${market.title}
-        - Liquidity: ${market.liquidity}
-        - Volume: ${market.volume}
-        `
-          )
-          .join('\n')}
 
         ### Task ###
         Provide analysis on the current market data compared to the historical market data.
-        Focus on the markets with most volume and liquidity. 
+        Focus on the markets with most volume and liquidity. Make sure to include Bitcoin, Ethereum, Solana and other major assets.
         Indicate range of price movements, potential outcomes as well as most like price.
         Include any noticable trends or patterns in the data that could be useful.
         Use following format:
@@ -66,9 +72,12 @@ function formatPrompt(
         Short-term outlook: [outlook]
 
         ### Additional Insights ###
-        Airdrops: [list of airdrops with assets and probabilities]
-        Events: [list of regulatory or any significant events and probabilities]
-        Listings: [list of coin listings and probabilities]
+        Airdrops: 
+        [list of airdrops with assets and probabilities]
+        Events: 
+        [list of regulatory or any significant events and probabilities]
+        Listings: 
+        [list of coin listings and probabilities]
 
         For aidrops, events, and listings only include markets with high volume and liquidity.
         When indicating probabilities, always provide numerical values and specify trend by comparing with previous values.
@@ -82,13 +91,15 @@ function formatPrompt(
  * Analyze trends using OpenAI LLM
  * @param {StreamlinedParentMarket[]} currentMarkets - Array of current market data
  * @param {StreamlinedParentMarket[]} historicalMarkets - Array of historical market data
+ * @param {string | null} latestReport - Latest LLM report
  * @returns {Promise<string>} - Analysis result
  */
 export async function analyzeTrendsWithLLM(
   currentMarkets: StreamlinedParentMarket[],
-  historicalMarkets: StreamlinedParentMarket[]
+  historicalMarkets: StreamlinedParentMarket[],
+  latestReport: string | null
 ) {
-  const prompt = formatPrompt(currentMarkets, historicalMarkets);
+  const prompt = formatPrompt(currentMarkets, historicalMarkets, latestReport);
 
   const response = await llm.invoke(prompt);
 
