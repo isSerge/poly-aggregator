@@ -54,11 +54,27 @@ function formatPrompt(
           .join('\n')}
 
         ### Task ###
-        Compare the current market data to the historical market data and describe trends. 
-        Highlight significant changes in liquidity, volume, or outcome probabilities for child markets. 
-        Summarize your analysis and provide points of interest that might be useful for investors.
-        Group observations by asset or market type and provide insights into potential market movements.
-        Do not provide any disclaimers and description of what this analysis is for.
+        Provide analysis on the current market data compared to the historical market data.
+        Focus on the markets with most volume and liquidity. 
+        Indicate range of price movements, potential outcomes as well as most like price.
+        Include any noticable trends or patterns in the data that could be useful.
+        Use following format:
+        ### Assets ###
+        Asset name: [asset name]
+        Long-term outlook: [outlook]
+        Mid-term outlook: [outlook]
+        Short-term outlook: [outlook]
+
+        ### Additional Insights ###
+        Airdrops: [list of airdrops with assets and probabilities]
+        Events: [list of regulatory or any significant events and probabilities]
+        Listings: [list of coin listings and probabilities]
+
+        For aidrops, events, and listings only include markets with high volume and liquidity.
+        When indicating probabilities, always provide numerical values and specify trend by comparing with previous values.
+        Do not include preamble, jump straight into the insights.
+        Do not include market IDs or other technical details, focus on the analysis.
+        Do not include any not financial advice disclaimers or notes about risks.
     `;
 }
 
