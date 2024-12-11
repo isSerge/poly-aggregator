@@ -9,6 +9,7 @@ const envSchema = z.object({
     .enum(['development', 'production', 'test'])
     .default('development'),
   GEMINI_API_KEY: z.string(),
+  CRON_SCHEDULE: z.string().default('0 */12 * * *'), // Every 12 hours
 });
 
 export const config = envSchema.parse(process.env);
