@@ -114,7 +114,7 @@ function formatPrompt(
             - Likelihood: Highly unlikely.
 
       2. **Historical Trends**:
-        - Compare probabilities with historical data and highlight changes (e.g., "up from 30% to 40%" or "unchanged").
+        - Compare probabilities with historical data and highlight changes (e.g., "up from 30% to 40%" or "trend unchanged").
 
       3. **Focus Areas**:
         - Prioritize markets with the **most volume and liquidity**.
