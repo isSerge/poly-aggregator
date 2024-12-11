@@ -3,15 +3,35 @@ import { config } from './config.js';
 import {
   ApiParentMarket,
   ParentMarket,
-  isApiParentMarketArray,
+  ApiParentMarketArraySchema,
+  ParentMarketSchema,
 } from './types.js';
-import { safeJSONParse, handleError } from './utils.js';
+import { handleError } from './utils.js';
 
-// Convert an API parent market object to a streamlined parent market object
 export const toStreamlinedMarket = (
   apiResponse: ApiParentMarket
 ): ParentMarket => {
-  return {
+  // Using Zod's transform capabilities, the fields are already parsed and transformed.
+  // Therefore, we can directly map the fields without manual parsing.
+
+  // Filter out closed child markets
+  const filteredChildMarkets = apiResponse.markets.filter(
+    (market) => !market.closed
+  );
+
+  // Map to internal ChildMarket type
+  const childMarkets = filteredChildMarkets.map((market) => ({
+    id: market.id,
+    question: market.question,
+    outcomes: market.outcomes, // Already string[]
+    outcomePrices: market.outcomePrices, // Already string[]
+    volume: market.volume, // Already number
+    active: market.active,
+    closed: market.closed,
+  }));
+
+  // Create the ParentMarket object
+  const parentMarket: ParentMarket = {
     id: apiResponse.id,
     title: apiResponse.title,
     startDate: apiResponse.startDate,
@@ -20,18 +40,12 @@ export const toStreamlinedMarket = (
     closed: apiResponse.closed,
     liquidity: apiResponse.liquidity,
     volume: apiResponse.volume,
-    childMarkets: apiResponse.markets
-      .filter((market) => !market.closed)
-      .map((market) => ({
-        id: market.id,
-        question: market.question,
-        outcomes: safeJSONParse<string[]>(market.outcomes) || [],
-        outcomePrices: safeJSONParse<string[]>(market.outcomePrices) || [],
-        volume: parseFloat(market.volume),
-        active: market.active,
-        closed: market.closed,
-      })),
+    childMarkets,
   };
+
+  ParentMarketSchema.parse(parentMarket);
+
+  return parentMarket;
 };
 
 export async function fetchCryptoMarkets(): Promise<ParentMarket[]> {
@@ -56,20 +70,36 @@ export async function fetchCryptoMarkets(): Promise<ParentMarket[]> {
     }
 
     const responseBody = await response.body.text();
-    const data = safeJSONParse<ApiParentMarket[]>(responseBody);
 
-    // Handle the case where data is null
-    if (!data) {
-      throw new Error('Failed to parse API response: data is null');
+    // Parse the JSON response
+    let parsedData: unknown;
+    try {
+      parsedData = JSON.parse(responseBody);
+    } catch {
+      throw new Error('Failed to parse JSON response from API');
     }
 
-    if (!isApiParentMarketArray(data)) {
+    // Validate and transform the data using Zod
+    const validationResult = ApiParentMarketArraySchema.safeParse(parsedData);
+
+    if (!validationResult.success) {
+      // Extract and format Zod validation errors for better debugging
+      const formattedErrors = validationResult.error.errors.map((err) => ({
+        path: err.path.join('.'),
+        message: err.message,
+      }));
       throw new Error(
-        'Invalid API response format: Expected an array of ApiParentMarket'
+        `API response validation failed: ${JSON.stringify(formattedErrors)}`
       );
     }
 
-    return data.map(toStreamlinedMarket);
+    const apiParentMarkets = validationResult.data;
+
+    // Transform API parent markets to internal ParentMarket types
+    const parentMarkets: ParentMarket[] =
+      apiParentMarkets.map(toStreamlinedMarket);
+
+    return parentMarkets;
   } catch (error) {
     handleError(error, 'Error fetching crypto markets');
     throw error; // Rethrow to maintain original error handling
