@@ -8,6 +8,7 @@ import {
   saveReport,
 } from './storage.js';
 import { analyzeTrendsWithLLM } from './llm.js';
+import cron from 'node-cron';
 
 export async function main() {
   try {
@@ -64,4 +65,8 @@ export async function main() {
   }
 }
 
+// Schedule the main function to run every 6 hours
+cron.schedule('0 */6 * * *', main);
+
+// Initial call to run the main function immediately
 main();
