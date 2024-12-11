@@ -1,203 +1,116 @@
-import { fileURLToPath } from 'url';
-import fs from 'fs/promises';
-import path from 'path';
-import { existsSync } from 'fs';
-import { handleError } from './utils.js';
-import {
-  StreamlinedParentMarket,
-  StreamlinedParentMarketArraySchema,
-} from './types.js';
+import * as uuid from 'uuid';
 import { logger } from './logger.js';
+import { ParentMarket, MarketRow, MarketRowSchema } from './types.js';
+import { db } from './db.js';
 
-// Define paths
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_FOLDER = path.join(__dirname, '../data');
-const CURRENT_FILE = path.join(DATA_FOLDER, 'current.json');
-const HISTORICAL_FILE = path.join(DATA_FOLDER, 'historical.json');
-const TEMP_SUFFIX = '.tmp';
-const REPORTS_FOLDER = path.join(DATA_FOLDER, 'reports');
+export function saveCurrentMarkets(currentMarkets: ParentMarket[]) {
+  const insertMarket = db.prepare(`
+      INSERT OR REPLACE INTO markets (id, title, start_date, end_date, active, closed, liquidity, volume)
+      VALUES (@id, @title, @start_date, @end_date, @active, @closed, @liquidity, @volume)
+    `);
 
-// Utility function to ensure the folder exists
-async function ensureFolderExists(folder: string): Promise<void> {
-  if (!existsSync(folder)) {
-    await fs.mkdir(folder, { recursive: true });
-  }
-}
+  const insertChildMarket = db.prepare(`
+      INSERT OR REPLACE INTO child_markets (id, parent_market_id, question, outcomes, outcome_prices, volume, active, closed)
+      VALUES (@id, @parent_market_id, @question, @outcomes, @outcome_prices, @volume, @active, @closed)
+    `);
 
-// Write data to a JSON file (atomic)
-async function writeJSON(
-  filename: string,
-  data: StreamlinedParentMarket[]
-): Promise<void> {
-  try {
-    const tempFile = filename + TEMP_SUFFIX;
-    await fs.writeFile(tempFile, JSON.stringify(data, null, 2));
-    await fs.rename(tempFile, filename); // Replace the original file
-    logger.info(`Successfully wrote to ${filename}`);
-  } catch (error) {
-    handleError(error, `Error writing to ${filename}`);
-    throw error;
-  }
-}
-
-// Read data from a JSON file
-async function readJSON<T>(filename: string): Promise<T[]> {
-  try {
-    const file = await fs.readFile(filename, 'utf-8');
-    const data = JSON.parse(file);
-
-    // Validate against StreamlinedParentMarketArraySchema
-    if (!StreamlinedParentMarketArraySchema.safeParse(data).success) {
-      throw new Error(`Invalid data structure found in ${filename}`);
-    }
-
-    return data as T[]; // Cast to T[]
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      (error as NodeJS.ErrnoException).code === 'ENOENT'
-    ) {
-      logger.warn(`File ${filename} not found, returning empty array.`);
-      return [];
-    }
-    handleError(error, `Error reading from ${filename}`);
-    throw error;
-  }
-}
-
-// Helper function to merge data (by `id`)
-function mergeData(
-  existingData: StreamlinedParentMarket[],
-  newData: StreamlinedParentMarket[]
-): StreamlinedParentMarket[] {
-  const existingMap = new Map(existingData.map((item) => [item.id, item]));
-  newData.forEach((item) => existingMap.set(item.id, item)); // Overwrite or add new data
-  return Array.from(existingMap.values());
-}
-
-// Exported methods
-// Not used in main code, but can be used for testing and debugging
-export async function saveCurrentData(
-  data: StreamlinedParentMarket[]
-): Promise<void> {
-  await ensureFolderExists(DATA_FOLDER);
-
-  // Validate data before saving
-  const validationResult = StreamlinedParentMarketArraySchema.safeParse(data);
-
-  if (!validationResult.success) {
-    logger.error(
-      `Data validation failed for current data:`,
-      validationResult.error
-    );
-    throw new Error(`Invalid data structure for current data`);
-  }
-
-  await writeJSON(CURRENT_FILE, data);
-}
-
-export async function saveHistoricalData(
-  data: StreamlinedParentMarket[]
-): Promise<void> {
-  await ensureFolderExists(DATA_FOLDER);
-
-  // Validate the new data before merging it with historical data
-  const validationResult = StreamlinedParentMarketArraySchema.safeParse(data);
-  if (!validationResult.success) {
-    logger.error(
-      `Data validation failed for historical data:`,
-      validationResult.error
-    );
-    throw new Error(`Invalid data structure for historical data`);
-  }
-
-  // Fetch existing historical data
-  const existingData = await getHistoricalData();
-
-  // Merge and deduplicate data
-  const mergedData = mergeData(existingData, data).filter(
-    (item, index, self) => index === self.findIndex((t) => t.id === item.id) // Deduplicate by ID
-  );
-
-  // Write the updated historical data back to the file
-  await writeJSON(HISTORICAL_FILE, mergedData);
-}
-
-// Not used in main code, but can be used for testing and debugging
-export async function getCurrentData(): Promise<StreamlinedParentMarket[]> {
-  await ensureFolderExists(DATA_FOLDER);
-  return await readJSON(CURRENT_FILE);
-}
-
-export async function getHistoricalData(): Promise<StreamlinedParentMarket[]> {
-  await ensureFolderExists(DATA_FOLDER);
-  return await readJSON(HISTORICAL_FILE);
-}
-
-// Save a new LLM report as a separate file
-export async function saveReport(report: string): Promise<void> {
-  await ensureFolderExists(REPORTS_FOLDER);
-
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-'); // Format the timestamp
-  const reportFilename = `report-${timestamp}}.txt`;
-  const filePath = path.join(REPORTS_FOLDER, reportFilename);
-
-  // Ensure the report content is formatted with proper line breaks
-  const formattedReport = `=== Polymarket Crypto Markets Analysis Report ===\n\nDate: ${new Date().toUTCString()}\n\n${report.replace(/\\n/g, '\n')}\n\n==========================\n`;
-
-  try {
-    await fs.writeFile(filePath, formattedReport, 'utf-8');
-    logger.info(`Successfully saved LLM report to ${filePath}`);
-  } catch (error) {
-    handleError(error, 'Error saving LLM report');
-    throw error;
-  }
-}
-
-// List all stored LLM reports
-export async function getAllReports(): Promise<string[]> {
-  await ensureFolderExists(REPORTS_FOLDER);
-
-  try {
-    const files = await fs.readdir(REPORTS_FOLDER);
-    return files.filter((file) => file.endsWith('.txt'));
-  } catch (error) {
-    handleError(error, `Error listing LLM reports in ${REPORTS_FOLDER}`);
-    throw error;
-  }
-}
-
-// Retrieve the latest LLM report
-export async function getLatestReport(): Promise<string | null> {
-  await ensureFolderExists(REPORTS_FOLDER);
-
-  try {
-    // List all report files
-    const files = await fs.readdir(REPORTS_FOLDER);
-
-    // Filter only `.txt` files and sort by timestamp in descending order
-    const reportFiles = files
-      .filter((file) => file.startsWith('report-') && file.endsWith('.txt'))
-      .sort((a, b) => {
-        const timestampA = a.match(/report-(.+?)-[a-f0-9-]+\.txt/)?.[1];
-        const timestampB = b.match(/report-(.+?)-[a-f0-9-]+\.txt/)?.[1];
-
-        if (!timestampA || !timestampB) return 0;
-
-        return new Date(timestampB).getTime() - new Date(timestampA).getTime(); // Descending order
+  const transaction = db.transaction((markets: ParentMarket[]) => {
+    for (const market of markets) {
+      insertMarket.run({
+        ...market,
+        start_date: market.startDate,
+        end_date: market.endDate,
+        active: market.active ? 1 : 0,
+        closed: market.closed ? 1 : 0,
       });
 
-    if (reportFiles.length === 0) {
-      logger.warn('No LLM reports found.');
-      return null;
+      for (const childMarket of market.childMarkets || []) {
+        insertChildMarket.run({
+          id: childMarket.id,
+          parent_market_id: market.id,
+          question: childMarket.question,
+          outcomes: JSON.stringify(childMarket.outcomes),
+          outcome_prices: JSON.stringify(childMarket.outcomePrices),
+          volume: childMarket.volume,
+          active: childMarket.active ? 1 : 0,
+          closed: childMarket.closed ? 1 : 0,
+        });
+      }
     }
+  });
 
-    // Read the latest report
-    const latestFile = reportFiles[0];
-    const filePath = path.join(REPORTS_FOLDER, latestFile);
-    return await fs.readFile(filePath, 'utf-8');
-  } catch (error) {
-    handleError(error, 'Error retrieving the latest LLM report');
-    throw error;
-  }
+  transaction(currentMarkets);
+  logger.info('Successfully saved current markets');
+}
+
+export function getHistoricalData(): ParentMarket[] {
+  const rows = db
+    .prepare(
+      `
+      SELECT * FROM markets
+      LEFT JOIN child_markets ON markets.id = child_markets.parent_market_id
+    `
+    )
+    .all();
+
+  // Validate and parse rows using Zod
+  const validRows = rows
+    .map((row) => MarketRowSchema.safeParse(row))
+    .filter((result) => result.success)
+    .map((result) => result.data); // Extract valid data
+
+  // Group child markets under their parent
+  const markets = validRows.reduce(
+    (acc: Record<string, ParentMarket>, row: MarketRow) => {
+      const parent = acc[row.id] || {
+        id: row.id,
+        title: row.title,
+        startDate: row.start_date,
+        endDate: row.end_date,
+        active: !!row.active,
+        closed: !!row.closed,
+        liquidity: row.liquidity,
+        volume: row.volume,
+        childMarkets: [],
+      };
+
+      if (row.parent_market_id) {
+        parent.childMarkets.push({
+          id: row.child_markets_id || '', // Ensure id is a string
+          question: row.question || '', // Ensure question is a string
+          outcomes: JSON.parse(row.outcomes || '[]'), // Parse outcomes
+          outcomePrices: JSON.parse(row.outcome_prices || '[]'), // Parse outcome prices
+          volume: row.child_markets_volume || 0, // Default to 0 if undefined
+          active: !!row.child_markets_active,
+          closed: !!row.child_markets_closed,
+        });
+      }
+
+      acc[row.id] = parent;
+      return acc;
+    },
+    {}
+  );
+
+  return Object.values(markets);
+}
+
+export function saveReport(reportContent: string) {
+  const stmt = db.prepare(`
+      INSERT INTO reports (id, content, created_at)
+      VALUES (?, ?, datetime('now'))
+    `);
+  stmt.run(uuid.v4(), reportContent);
+  logger.info('Report saved successfully');
+}
+
+export function getLatestReport() {
+  const row = db
+    .prepare(
+      `
+      SELECT content FROM reports ORDER BY created_at DESC LIMIT 1
+    `
+    )
+    .get() as { content: string } | undefined;
+  return row ? row.content : null;
 }

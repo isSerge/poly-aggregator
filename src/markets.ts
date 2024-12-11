@@ -2,7 +2,7 @@ import { request } from 'undici';
 import { config } from './config.js';
 import {
   ApiParentMarket,
-  StreamlinedParentMarket,
+  ParentMarket,
   isApiParentMarketArray,
 } from './types.js';
 import { safeJSONParse, handleError } from './utils.js';
@@ -10,7 +10,7 @@ import { safeJSONParse, handleError } from './utils.js';
 // Convert an API parent market object to a streamlined parent market object
 export const toStreamlinedMarket = (
   apiResponse: ApiParentMarket
-): StreamlinedParentMarket => {
+): ParentMarket => {
   return {
     id: apiResponse.id,
     title: apiResponse.title,
@@ -28,11 +28,13 @@ export const toStreamlinedMarket = (
         outcomes: safeJSONParse<string[]>(market.outcomes) || [],
         outcomePrices: safeJSONParse<string[]>(market.outcomePrices) || [],
         volume: parseFloat(market.volume),
+        active: market.active,
+        closed: market.closed,
       })),
   };
 };
 
-export async function fetchCryptoMarkets(): Promise<StreamlinedParentMarket[]> {
+export async function fetchCryptoMarkets(): Promise<ParentMarket[]> {
   const queryParams = new URLSearchParams({
     active: 'true',
     archived: 'false',

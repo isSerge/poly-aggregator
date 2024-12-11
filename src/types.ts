@@ -7,10 +7,12 @@ const ChildMarketSchema = z.object({
   outcomes: z.array(z.string()), // Parsed outcomes array
   outcomePrices: z.array(z.string()), // Parsed outcome prices
   volume: z.number(), // Volume in numeric format
+  active: z.boolean(), // Active status
+  closed: z.boolean(), // Closed status
 });
 
-// Define the StreamlinedParentMarket schema
-const StreamlinedParentMarketSchema = z.object({
+// Define the ParentMarket schema
+export const ParentMarketSchema = z.object({
   id: z.string(), // Unique identifier for tracking
   title: z.string(), // Market title/question
   startDate: z.string().nullable(), // ISO string (optional)
@@ -22,24 +24,9 @@ const StreamlinedParentMarketSchema = z.object({
   childMarkets: z.array(ChildMarketSchema), // Array of child markets
 });
 
-export const StreamlinedParentMarketArraySchema = z.array(
-  StreamlinedParentMarketSchema
-);
-
 // Infer TypeScript interfaces from Zod schemas
 export type ChildMarket = z.infer<typeof ChildMarketSchema>;
-export type StreamlinedParentMarket = z.infer<
-  typeof StreamlinedParentMarketSchema
->;
-
-// Other existing interfaces (if any) can be added below
-export interface StreamlinedChildMarket {
-  id: string; // Unique identifier for tracking
-  question: string; // Market-specific question
-  outcomes: string[]; // Parsed outcomes array
-  outcomePrices: string[]; // Parsed outcome prices
-  volume: number; // Volume in numeric format
-}
+export type ParentMarket = z.infer<typeof ParentMarketSchema>;
 
 export interface ApiParentMarket {
   id: string; // Unique identifier for the parent market
@@ -109,3 +96,24 @@ export const isApiParentMarketArray = (
     Array.isArray(data) && data.every((item) => 'id' in item && 'title' in item)
   ); // Add more checks as needed
 };
+
+export const MarketRowSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  start_date: z.string(),
+  end_date: z.string(),
+  active: z.number(), // Assuming active is stored as a number (0 or 1)
+  closed: z.number(), // Assuming closed is stored as a number (0 or 1)
+  liquidity: z.number(),
+  volume: z.number(),
+  parent_market_id: z.string().optional(),
+  child_markets_id: z.string().optional(),
+  question: z.string().optional(),
+  outcomes: z.string().optional(),
+  outcome_prices: z.string().optional(),
+  child_markets_volume: z.number().optional(),
+  child_markets_active: z.number().optional(),
+  child_markets_closed: z.number().optional(),
+});
+
+export type MarketRow = z.infer<typeof MarketRowSchema>;

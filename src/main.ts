@@ -1,7 +1,7 @@
 import { logger } from './logger.js';
 import { fetchCryptoMarkets } from './markets.js';
 import {
-  saveHistoricalData,
+  saveCurrentMarkets,
   getHistoricalData,
   getLatestReport,
   saveReport,
@@ -23,17 +23,19 @@ export async function main() {
 
     logger.info(`Fetched ${currentMarkets.length} crypto markets.`);
 
-    // Step 2: Load historical data and the latest LLM report
-    const [historicalMarkets, latestReport] = await Promise.all([
-      getHistoricalData(),
-      getLatestReport(),
-    ]);
+    // Step 2: Save the current markets to the database
+    saveCurrentMarkets(currentMarkets);
+    logger.info('Saved current market data.');
 
-    const hasHistoricalData = historicalMarkets && historicalMarkets.length > 0;
+    // Step 3: Load historical data and the latest LLM report
+    const historicalMarkets = await getHistoricalData();
+    const latestReport = await getLatestReport();
+
+    const hasHistoricalData = historicalMarkets.length > 0;
 
     // If there is no historical data, skip the analysis
     if (hasHistoricalData) {
-      // Step 3: Feed data to LLM for analysis
+      // Step 4: Feed data to LLM for analysis
       const analysis = await analyzeTrendsWithLLM(
         currentMarkets,
         historicalMarkets,
@@ -47,14 +49,11 @@ export async function main() {
 
       logger.info('Analysis completed:');
       logger.info(analysis.content);
-      // Step 4: Save the LLM report
-      await saveReport(analysis.content.toString());
-    }
 
-    // Step 5: Update historical data after feeding it to LLM
-    const updatedHistoricalData = [...historicalMarkets, ...currentMarkets];
-    await saveHistoricalData(updatedHistoricalData);
-    logger.info('Updated historical market data.');
+      // Step 5: Save the LLM report to the database
+      saveReport(analysis.content.toString());
+      logger.info('Saved LLM report.');
+    }
   } catch (error) {
     handleError(
       error,
