@@ -76,6 +76,7 @@ function mergeData(
 }
 
 // Exported methods
+// Not used in main code, but can be used for testing and debugging
 export async function saveCurrentData(
   data: StreamlinedParentMarket[]
 ): Promise<void> {
@@ -122,6 +123,7 @@ export async function saveHistoricalData(
   await writeJSON(HISTORICAL_FILE, mergedData);
 }
 
+// Not used in main code, but can be used for testing and debugging
 export async function getCurrentData(): Promise<StreamlinedParentMarket[]> {
   await ensureFolderExists(DATA_FOLDER);
   return await readJSON(CURRENT_FILE);

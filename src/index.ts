@@ -1,14 +1,13 @@
+import cron from 'node-cron';
 import { logger } from './logger.js';
 import { fetchCryptoMarkets } from './markets.js';
 import {
-  saveCurrentData,
   saveHistoricalData,
   getHistoricalData,
   getLatestReport,
   saveReport,
 } from './storage.js';
 import { analyzeTrendsWithLLM } from './llm.js';
-import cron from 'node-cron';
 
 export async function main() {
   try {
@@ -24,14 +23,10 @@ export async function main() {
 
     logger.info(`Fetched ${currentMarkets.length} crypto markets.`);
 
-    // Step 2: Save the current market data to current.json
-    await saveCurrentData(currentMarkets);
-    logger.info('Saved current market data.');
-
-    // Step 3: Load historical data
+    // Step 2: Load historical data
     const historicalMarkets = await getHistoricalData();
 
-    // Step 4: Get previous LLM report
+    // Step 3: Get previous LLM report
     const latestReport = await getLatestReport();
 
     const hasHistoricalData = historicalMarkets && historicalMarkets.length > 0;
@@ -51,7 +46,7 @@ export async function main() {
       await saveReport(analysis.content.toString());
     }
 
-    // Step 6: Update historical data after feeding it to LLM
+    // Step 5: Update historical data after feeding it to LLM
     const updatedHistoricalData = [...historicalMarkets, ...currentMarkets];
     await saveHistoricalData(updatedHistoricalData);
     logger.info('Updated historical market data.');
@@ -66,7 +61,7 @@ export async function main() {
 }
 
 // Schedule the main function to run every 6 hours
-cron.schedule('0 */6 * * *', main);
+cron.schedule('0 */12 * * *', main);
 
 // Initial call to run the main function immediately
 main();
