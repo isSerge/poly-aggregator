@@ -2,12 +2,12 @@ import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
-import { v4 as uuidv4 } from 'uuid';
 import { handleError } from './utils.js';
 import {
   StreamlinedParentMarket,
   StreamlinedParentMarketArraySchema,
 } from './types.js';
+import { logger } from './logger.js';
 
 // Define paths
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -33,7 +33,7 @@ async function writeJSON(
     const tempFile = filename + TEMP_SUFFIX;
     await fs.writeFile(tempFile, JSON.stringify(data, null, 2));
     await fs.rename(tempFile, filename); // Replace the original file
-    console.log(`Successfully wrote to ${filename}`);
+    logger.info(`Successfully wrote to ${filename}`);
   } catch (error) {
     handleError(error, `Error writing to ${filename}`);
     throw error;
@@ -57,7 +57,7 @@ async function readJSON<T>(filename: string): Promise<T[]> {
       error instanceof Error &&
       (error as NodeJS.ErrnoException).code === 'ENOENT'
     ) {
-      console.warn(`File ${filename} not found, returning empty array.`);
+      logger.warn(`File ${filename} not found, returning empty array.`);
       return [];
     }
     handleError(error, `Error reading from ${filename}`);
@@ -86,7 +86,7 @@ export async function saveCurrentData(
   const validationResult = StreamlinedParentMarketArraySchema.safeParse(data);
 
   if (!validationResult.success) {
-    console.error(
+    logger.error(
       `Data validation failed for current data:`,
       validationResult.error
     );
@@ -104,7 +104,7 @@ export async function saveHistoricalData(
   // Validate the new data before merging it with historical data
   const validationResult = StreamlinedParentMarketArraySchema.safeParse(data);
   if (!validationResult.success) {
-    console.error(
+    logger.error(
       `Data validation failed for historical data:`,
       validationResult.error
     );
@@ -139,7 +139,7 @@ export async function saveReport(report: string): Promise<void> {
   await ensureFolderExists(REPORTS_FOLDER);
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-'); // Format the timestamp
-  const reportFilename = `report-${timestamp}-${uuidv4()}.txt`;
+  const reportFilename = `report-${timestamp}}.txt`;
   const filePath = path.join(REPORTS_FOLDER, reportFilename);
 
   // Ensure the report content is formatted with proper line breaks
@@ -147,7 +147,7 @@ export async function saveReport(report: string): Promise<void> {
 
   try {
     await fs.writeFile(filePath, formattedReport, 'utf-8');
-    console.log(`Successfully saved LLM report to ${filePath}`);
+    logger.info(`Successfully saved LLM report to ${filePath}`);
   } catch (error) {
     handleError(error, 'Error saving LLM report');
     throw error;
@@ -188,7 +188,7 @@ export async function getLatestReport(): Promise<string | null> {
       });
 
     if (reportFiles.length === 0) {
-      console.warn('No LLM reports found.');
+      logger.warn('No LLM reports found.');
       return null;
     }
 
