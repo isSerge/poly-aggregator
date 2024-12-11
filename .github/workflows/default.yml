@@ -24,6 +24,8 @@ jobs:
       - run: npm run test
         env:
           NODE_ENV: test
+          GAMMA_API_URL: ${{ secrets.GAMMA_API_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
   build:
     needs: test
