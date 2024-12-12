@@ -3,7 +3,7 @@ import { handleError } from './utils.js';
 import { DatabaseManager } from './db/db.js';
 import { fetchCryptoMarkets } from './polymarket/polymarket.js';
 import { MarketRepository } from './markets/markets.js';
-import { analyzeTrendsWithLLM } from './reports/llm.js';
+import { analyzePredictionMarkets } from './reports/llm.js';
 import { ReportRepository } from './reports/reports.js';
 
 export async function main() {
@@ -33,7 +33,7 @@ export async function main() {
 
     const latestReport = await reportRepository.getLatest();
 
-    const analysis = await analyzeTrendsWithLLM(
+    const analysis = await analyzePredictionMarkets(
       currentMarkets,
       historicalMarkets,
       latestReport
