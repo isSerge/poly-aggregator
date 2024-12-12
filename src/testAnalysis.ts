@@ -10,7 +10,7 @@ import { handleError } from './utils.js';
  * Test script to analyze market trends using LLM without saving results.
  * Useful for testing prompt changes and validating LLM output.
  */
-const dbManager = await DatabaseManager.create();
+const dbManager = new DatabaseManager();
 
 try {
   if (!dbManager.isHealthy()) {

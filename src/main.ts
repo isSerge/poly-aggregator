@@ -7,7 +7,7 @@ import { analyzePredictionMarkets } from './reports/llm.js';
 import { ReportRepository } from './reports/reports.js';
 
 export async function main() {
-  const dbManager = await DatabaseManager.create();
+  const dbManager = new DatabaseManager();
 
   try {
     if (!dbManager.isHealthy()) {
