@@ -1,9 +1,10 @@
 import { logger } from './logger.js';
-import { fetchCryptoMarkets } from './polymarket/polymarket.js';
-import { MarketRepository } from './markets/markets.js';
-import { analyzeTrendsWithLLM } from './llm/llm.js';
 import { handleError } from './utils.js';
 import { DatabaseManager } from './db/db.js';
+import { fetchCryptoMarkets } from './polymarket/polymarket.js';
+import { MarketRepository } from './markets/markets.js';
+import { analyzeTrendsWithLLM } from './reports/llm.js';
+import { ReportRepository } from './reports/reports.js';
 
 export async function main() {
   const dbManager = new DatabaseManager();
@@ -15,6 +16,7 @@ export async function main() {
     }
 
     const marketRepository = new MarketRepository(dbManager);
+    const reportRepository = new ReportRepository(dbManager);
 
     const currentMarkets = await fetchCryptoMarkets();
     if (!currentMarkets?.length) {
@@ -26,10 +28,10 @@ export async function main() {
     if (!historicalMarkets.length) return;
 
     logger.info(
-      `Fetched market data: ${currentMarkets.length}, ${historicalMarkets.length}`
+      `Fetched market data: current markets: ${currentMarkets.length}, historical markets: ${historicalMarkets.length}`
     );
 
-    const latestReport = await marketRepository.getLatestReport();
+    const latestReport = await reportRepository.getLatest();
 
     const analysis = await analyzeTrendsWithLLM(
       currentMarkets,
@@ -38,7 +40,7 @@ export async function main() {
     );
 
     if (analysis?.content) {
-      marketRepository.saveReport(analysis.content.toString());
+      reportRepository.save(analysis.content.toString());
       marketRepository.saveCurrentMarkets(currentMarkets);
       logger.info(analysis.content, 'Analysis completed:');
     }
