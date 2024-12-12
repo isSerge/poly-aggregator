@@ -45,7 +45,10 @@ const ApiChildMarketSchema = z.object({
   description: z.string(),
   outcomes: z.string().transform((str) => JSON.parse(str) as string[]),
   outcomePrices: z.string().transform((str) => JSON.parse(str) as string[]),
-  volume: z.string().transform((str) => parseFloat(str)),
+  volume: z
+    .string()
+    .transform((str) => parseFloat(str))
+    .optional(),
   active: z.boolean(),
   closed: z.boolean(),
   createdAt: z.string().refine((date) => !isNaN(Date.parse(date)), {
@@ -90,7 +93,7 @@ const ApiParentMarketSchema = z.object({
   featured: z.boolean(),
   restricted: z.boolean(),
   liquidity: z.number(),
-  volume: z.number(),
+  volume: z.number().optional(),
   openInterest: z.number().optional(),
   createdAt: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: 'Invalid date format for createdAt',

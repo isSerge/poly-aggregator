@@ -26,9 +26,9 @@ export const toStreamlinedMarket = (
     id: market.id,
     parent_market_id: apiResponse.id,
     question: market.question,
-    outcomes: market.outcomes, // Already string[]
-    outcomePrices: market.outcomePrices, // Already string[]
-    volume: market.volume, // Already number
+    outcomes: market.outcomes,
+    outcomePrices: market.outcomePrices,
+    volume: market.volume || 0,
     active: market.active,
     closed: market.closed,
   }));
@@ -42,7 +42,7 @@ export const toStreamlinedMarket = (
     active: apiResponse.active,
     closed: apiResponse.closed,
     liquidity: apiResponse.liquidity,
-    volume: apiResponse.volume,
+    volume: apiResponse.volume || 0,
     childMarkets,
   };
 
@@ -91,6 +91,7 @@ export async function fetchCryptoMarkets(): Promise<ParentMarket[]> {
         path: err.path.join('.'),
         message: err.message,
       }));
+
       throw new Error(
         `API response validation failed: ${JSON.stringify(formattedErrors)}`
       );
