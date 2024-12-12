@@ -1,7 +1,6 @@
 import Database from 'better-sqlite3';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import fs from 'fs';
-import fsp from 'fs/promises';
 import path from 'path';
 import { logger } from '../logger.js';
 import { handleError } from '../utils.js';
@@ -13,23 +12,17 @@ export class DatabaseManager {
   private readonly dbPath: string;
   private readonly dbDir: string;
 
-  private constructor(dbPath: string) {
+  constructor(dbPath: string = config.DB_PATH) {
     this.dbPath = dbPath;
     this.dbDir = path.dirname(dbPath);
     this.ensureDirectoryExists();
     this.db = this.createDatabaseConnection();
-  }
-
-  public static async create(
-    dbPath: string = config.DB_PATH
-  ): Promise<DatabaseManager> {
-    const manager = new DatabaseManager(dbPath);
-    await manager.initializeSchema();
-    return manager;
+    this.initializeSchema();
   }
 
   public close() {
     this.db.close();
+    logger.info('Database connection closed');
   }
 
   public isHealthy(): boolean {
@@ -49,22 +42,27 @@ export class DatabaseManager {
     });
   }
 
-  private async initializeSchema() {
+  private initializeSchema() {
     try {
-      const schemaPath = path.join(
-        path.dirname(fileURLToPath(import.meta.url)),
-        'schema.sql'
-      );
-      const schema = await fsp.readFile(schemaPath, 'utf-8');
+      const schemaPath = this.resolveSchemaPath();
+      const schema = fs.readFileSync(schemaPath, 'utf-8');
       this.db.exec(schema);
       logger.info('Database schema initialized');
     } catch (error) {
       handleError(error, 'Error initializing database schema');
+      throw error; // Re-throw to indicate failure
     }
+  }
+
+  private resolveSchemaPath(): string {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    return path.resolve(__dirname, 'schema.sql');
   }
 
   getConnection(): DatabaseType {
     return this.db;
   }
 }
+
 export { DatabaseType };
