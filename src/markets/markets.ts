@@ -23,17 +23,21 @@ export class MarketRepository {
     const transaction = this.db.transaction((markets: ParentMarket[]) => {
       for (const market of markets) {
         insertMarket.run({
-          ...market,
+          id: market.id,
+          title: market.title,
           start_date: market.startDate,
           end_date: market.endDate,
           active: market.active ? 1 : 0,
           closed: market.closed ? 1 : 0,
+          liquidity: market.liquidity,
+          volume: market.volume,
         });
+        logger.info(`Inserted/Updated market with ID: ${market.id}`);
 
         for (const childMarket of market.childMarkets || []) {
           insertChildMarket.run({
             id: childMarket.id,
-            parent_market_id: market.id,
+            parent_market_id: childMarket.parent_market_id,
             question: childMarket.question,
             outcomes: JSON.stringify(childMarket.outcomes),
             outcome_prices: JSON.stringify(childMarket.outcomePrices),
@@ -41,12 +45,20 @@ export class MarketRepository {
             active: childMarket.active ? 1 : 0,
             closed: childMarket.closed ? 1 : 0,
           });
+          logger.info(
+            `Inserted/Updated child market with ID: ${childMarket.id}`
+          );
         }
       }
     });
 
-    transaction(currentMarkets);
-    logger.info('Successfully saved current markets');
+    try {
+      transaction(currentMarkets);
+      logger.info('Successfully saved current markets');
+    } catch (error) {
+      logger.error('Transaction failed and was rolled back', error);
+      throw error;
+    }
   }
 
   getHistoricalData(): ParentMarket[] {

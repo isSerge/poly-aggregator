@@ -346,4 +346,86 @@ describe('MarketRepository', () => {
       closed: true,
     });
   });
+
+  it('should have foreign key constraints enabled', () => {
+    const dbManager = getDbManager();
+    const fkEnabled = dbManager.areForeignKeysEnabled();
+    assert.ok(
+      fkEnabled,
+      `Foreign keys should be enabled, but got: ${fkEnabled}`
+    );
+  });
+
+  it('should rollback transaction if an error occurs during saving markets', () => {
+    const dbManager = getDbManager();
+    const fkEnabled = dbManager.areForeignKeysEnabled();
+    console.log(`Foreign keys enabled: ${fkEnabled}`); // Should log: true
+    assert.ok(
+      fkEnabled,
+      `Foreign keys should be enabled, but got: ${fkEnabled}`
+    );
+
+    const faultyMarkets: ParentMarket[] = [
+      {
+        id: 'market6',
+        title: 'Market 6',
+        startDate: '2023-06-01',
+        endDate: '2023-07-31',
+        active: true,
+        closed: false,
+        liquidity: 2200.0,
+        volume: 11000.0,
+        childMarkets: [
+          {
+            id: 'child6',
+            parent_market_id: 'nonexistent_market', // Invalid parent_market_id
+            question: 'Outcome 6?',
+            outcomes: ['Option X', 'Option Y'],
+            outcomePrices: ['2.0', '3.0'], // Kept as strings
+            volume: 500.0,
+            active: true,
+            closed: false,
+          },
+        ],
+      },
+    ];
+
+    // Attempt to save faulty markets and expect an error
+    try {
+      marketRepository.saveCurrentMarkets(faultyMarkets);
+      // If no error is thrown, fail the test
+      assert.fail(
+        'Expected an error due to foreign key constraint violation, but none was thrown.'
+      );
+      //   eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.log(`Error Message: ${error.message}`); // Log the actual error message
+      // Check if the error message matches the foreign key constraint violation
+      assert.match(
+        error.message,
+        /foreign key constraint failed/i,
+        'Expected a foreign key constraint failure error'
+      );
+    }
+
+    // Verify that neither the parent market nor the child market was inserted
+    const db = getDbManager().getConnection();
+    const savedMarket = db
+      .prepare('SELECT * FROM markets WHERE id = ?')
+      .get('market6');
+    const savedChild = db
+      .prepare('SELECT * FROM child_markets WHERE id = ?')
+      .get('child6');
+
+    assert.equal(
+      savedMarket,
+      undefined,
+      'Parent market should not be inserted due to rollback'
+    );
+    assert.equal(
+      savedChild,
+      undefined,
+      'Child market should not be inserted due to rollback'
+    );
+  });
 });

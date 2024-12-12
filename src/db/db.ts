@@ -17,6 +17,7 @@ export class DatabaseManager {
     this.dbDir = path.dirname(dbPath);
     this.ensureDirectoryExists();
     this.db = this.createDatabaseConnection();
+    this.enableForeignKeys();
     this.initializeSchema();
   }
 
@@ -42,6 +43,16 @@ export class DatabaseManager {
     });
   }
 
+  private enableForeignKeys() {
+    try {
+      this.db.pragma('foreign_keys = ON');
+      logger.info('Foreign key constraints enabled');
+    } catch (error) {
+      handleError(error, 'Error enabling foreign key constraints');
+      throw error;
+    }
+  }
+
   private initializeSchema() {
     try {
       const schemaPath = this.resolveSchemaPath();
@@ -50,7 +61,7 @@ export class DatabaseManager {
       logger.info('Database schema initialized');
     } catch (error) {
       handleError(error, 'Error initializing database schema');
-      throw error; // Re-throw to indicate failure
+      throw error;
     }
   }
 
@@ -60,8 +71,14 @@ export class DatabaseManager {
     return path.resolve(__dirname, 'schema.sql');
   }
 
-  getConnection(): DatabaseType {
+  public getConnection(): DatabaseType {
     return this.db;
+  }
+
+  public areForeignKeysEnabled(): boolean {
+    const result = this.db.pragma('foreign_keys', { simple: true });
+    logger.info(`Foreign keys enabled: ${result}`);
+    return result === 1;
   }
 }
 
