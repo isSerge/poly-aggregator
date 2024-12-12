@@ -1,7 +1,7 @@
 import * as uuid from 'uuid';
-import { logger } from './logger.js';
-import { ParentMarket, MarketRow, MarketRowSchema } from './types.js';
-import { db } from './db.js';
+import { logger } from '../logger.js';
+import { ParentMarket, MarketRow, MarketRowSchema } from './markets-schemas.js';
+import { db } from '../db/db.js';
 
 export function saveCurrentMarkets(currentMarkets: ParentMarket[]) {
   const insertMarket = db.prepare(`

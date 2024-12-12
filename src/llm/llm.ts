@@ -1,6 +1,6 @@
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
-import { config } from './config.js';
-import { ParentMarket, ChildMarket } from './types.js';
+import { config } from '../config.js';
+import { ParentMarket, ChildMarket } from '../markets/markets-schemas.js';
 
 const llm = new ChatGoogleGenerativeAI({
   model: 'gemini-1.5-flash',

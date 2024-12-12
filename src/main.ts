@@ -1,12 +1,12 @@
 import { logger } from './logger.js';
-import { fetchCryptoMarkets } from './markets.js';
+import { fetchCryptoMarkets } from './polymarket/polymarket.js';
 import {
   saveCurrentMarkets,
   getHistoricalData,
   getLatestReport,
   saveReport,
-} from './storage.js';
-import { analyzeTrendsWithLLM } from './llm.js';
+} from './markets/markets.js';
+import { analyzeTrendsWithLLM } from './llm/llm.js';
 import { handleError } from './utils.js';
 
 export async function main() {

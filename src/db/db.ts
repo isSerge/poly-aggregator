@@ -1,12 +1,11 @@
 import Database, { Database as DatabaseType } from 'better-sqlite3';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
-import path from 'path';
-import { logger } from './logger.js';
-import { handleError } from './utils.js';
-import { config } from './config.js';
+import path, { dirname } from 'path';
+import { logger } from '../logger.js';
+import { handleError } from '../utils.js';
+import { config } from '../config.js';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
 const DB_DIR = path.dirname(config.DB_PATH);
 

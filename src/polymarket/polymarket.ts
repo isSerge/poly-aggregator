@@ -1,12 +1,14 @@
 import { request } from 'undici';
-import { config } from './config.js';
+import { config } from '../config.js';
+import { handleError } from '../utils.js';
+import {
+  ParentMarket,
+  ParentMarketSchema,
+} from '../markets/markets-schemas.js';
 import {
   ApiParentMarket,
-  ParentMarket,
   ApiParentMarketArraySchema,
-  ParentMarketSchema,
-} from './types.js';
-import { handleError } from './utils.js';
+} from '../polymarket/polymarket-schemas.js';
 
 export const toStreamlinedMarket = (
   apiResponse: ApiParentMarket
