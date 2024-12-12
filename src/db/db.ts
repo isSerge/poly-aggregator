@@ -13,12 +13,19 @@ export class DatabaseManager {
   private readonly dbPath: string;
   private readonly dbDir: string;
 
-  constructor(dbPath: string = config.DB_PATH) {
+  private constructor(dbPath: string) {
     this.dbPath = dbPath;
     this.dbDir = path.dirname(dbPath);
     this.ensureDirectoryExists();
     this.db = this.createDatabaseConnection();
-    this.initializeSchema();
+  }
+
+  public static async create(
+    dbPath: string = config.DB_PATH
+  ): Promise<DatabaseManager> {
+    const manager = new DatabaseManager(dbPath);
+    await manager.initializeSchema();
+    return manager;
   }
 
   public close() {
