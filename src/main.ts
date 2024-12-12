@@ -23,11 +23,7 @@ export async function main() {
 
     logger.info(`Fetched ${currentMarkets.length} crypto markets.`);
 
-    // Step 2: Save the current markets to the database
-    saveCurrentMarkets(currentMarkets);
-    logger.info('Saved current market data.');
-
-    // Step 3: Load historical data and the latest LLM report
+    // Step 2: Load historical data and the latest LLM report
     const historicalMarkets = await getHistoricalData();
     const latestReport = await getLatestReport();
 
@@ -35,24 +31,23 @@ export async function main() {
 
     // If there is no historical data, skip the analysis
     if (hasHistoricalData) {
-      // Step 4: Feed data to LLM for analysis
+      // Step 3: Feed data to LLM for analysis
       const analysis = await analyzeTrendsWithLLM(
         currentMarkets,
         historicalMarkets,
         latestReport
       );
 
-      if (!analysis || !analysis.content) {
-        logger.warn('Analysis could not be completed. Skipping report save.');
-        return;
+      // Step 4: Save the analysis and the current markets to the database
+      if (analysis && analysis.content) {
+        saveReport(analysis.content.toString());
+        logger.info('Report saved to the database.');
+        saveCurrentMarkets(currentMarkets);
+        logger.info('Current markets saved to the database.');
       }
 
       logger.info('Analysis completed:');
       logger.info(analysis.content);
-
-      // Step 5: Save the LLM report to the database
-      saveReport(analysis.content.toString());
-      logger.info('Saved LLM report.');
     }
   } catch (error) {
     handleError(
