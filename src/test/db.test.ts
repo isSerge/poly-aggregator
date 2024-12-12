@@ -1,11 +1,13 @@
+import { setupTest } from './utils/test-utils.js';
+
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { setupTest } from './utils/test-utils.js';
 import { DatabaseManager } from '../db/db.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
+// Define __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -26,7 +28,7 @@ describe('DatabaseManager', () => {
       const stmt = db.prepare(
         `SELECT name FROM sqlite_master WHERE type='table' AND name = ?`
       );
-      const row = stmt.get(table);
+      const row = stmt.get(table); // Type inferred as any
       assert.ok(row, `Table ${table} should exist`);
     });
   });
@@ -43,6 +45,7 @@ describe('DatabaseManager', () => {
     insertStmt.run(marketId, 'Test Market', 1, 0, 1000.5, 5000.75);
 
     const selectStmt = db.prepare(`SELECT * FROM markets WHERE id = ?`);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const market = selectStmt.get(marketId) as any;
 
@@ -95,6 +98,7 @@ describe('DatabaseManager', () => {
     );
 
     const selectStmt = db.prepare(`SELECT * FROM child_markets WHERE id = ?`);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const childMarket = selectStmt.get(childMarketId) as any;
 
@@ -107,6 +111,7 @@ describe('DatabaseManager', () => {
     assert.equal(childMarket.active, 1);
     assert.equal(childMarket.closed, 0);
 
+    // Optionally, parse JSON fields
     const parsedOutcomes = JSON.parse(childMarket.outcomes);
     const parsedOutcomePrices = JSON.parse(childMarket.outcome_prices);
     assert.deepEqual(parsedOutcomes, ['Yes', 'No']);
@@ -127,6 +132,7 @@ describe('DatabaseManager', () => {
     insertStmt.run(reportId, content);
 
     const selectStmt = db.prepare(`SELECT * FROM reports WHERE id = ?`);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const report = selectStmt.get(reportId) as any;
 
@@ -136,7 +142,7 @@ describe('DatabaseManager', () => {
     assert.ok(report.created_at, 'Report should have a created_at timestamp');
   });
 
-  it('should ensure directory creation if it does not exist', async () => {
+  it('should ensure directory creation if it does not exist', () => {
     // Define a new DB path in a non-existing directory
     const newDbPath = path.join(__dirname, '../nonexistent_dir/new_test.db');
     const newDir = path.dirname(newDbPath);
@@ -146,11 +152,38 @@ describe('DatabaseManager', () => {
       fs.rmSync(newDir, { recursive: true, force: true });
     }
 
-    const dbManager = await DatabaseManager.create(newDbPath);
+    const dbManager = new DatabaseManager(newDbPath);
     assert.ok(fs.existsSync(newDir), 'Directory should be created');
     dbManager.close();
     if (fs.existsSync(newDbPath)) {
       fs.rmSync(newDbPath);
+    }
+  });
+
+  it('should handle schema initialization errors gracefully', () => {
+    // Backup the original readFileSync and logger.error methods
+    const originalReadFileSync = fs.readFileSync;
+
+    // Mock readFileSync to throw an error
+    fs.readFileSync = () => {
+      throw new Error('Simulated readFile error');
+    };
+
+    try {
+      // Attempt to create DatabaseManager, expecting it to throw
+      assert.throws(
+        () => new DatabaseManager('nonexistent.db'),
+        {
+          name: 'Error',
+          message: 'Simulated readFile error',
+        },
+        'DatabaseManager constructor should throw the simulated readFile error'
+      );
+    } finally {
+      // Restore the original readFileSync and logger.error methods
+      fs.readFileSync = originalReadFileSync;
+      // remove non-existent db file
+      fs.rmSync('nonexistent.db', { force: true });
     }
   });
 });
