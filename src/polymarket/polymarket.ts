@@ -24,6 +24,7 @@ export const toStreamlinedMarket = (
   // Map to internal ChildMarket type
   const childMarkets = filteredChildMarkets.map((market) => ({
     id: market.id,
+    parent_market_id: apiResponse.id,
     question: market.question,
     outcomes: market.outcomes, // Already string[]
     outcomePrices: market.outcomePrices, // Already string[]

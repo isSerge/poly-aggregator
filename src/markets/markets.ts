@@ -53,9 +53,25 @@ export class MarketRepository {
     const rows = this.db
       .prepare(
         `
-        SELECT * FROM markets
+        SELECT 
+          markets.id AS market_id,
+          markets.title,
+          markets.start_date,
+          markets.end_date,
+          markets.active AS market_active,
+          markets.closed AS market_closed,
+          markets.liquidity,
+          markets.volume,
+          child_markets.id AS child_id,
+          child_markets.question,
+          child_markets.outcomes,
+          child_markets.outcome_prices,
+          child_markets.volume AS child_volume,
+          child_markets.active AS child_active,
+          child_markets.closed AS child_closed
+        FROM markets
         LEFT JOIN child_markets ON markets.id = child_markets.parent_market_id
-      `
+        `
       )
       .all();
 
@@ -66,31 +82,32 @@ export class MarketRepository {
 
     const markets = validRows.reduce(
       (acc: Record<string, ParentMarket>, row: MarketRow) => {
-        const parent = acc[row.id] || {
-          id: row.id,
+        const parent = acc[row.market_id] || {
+          id: row.market_id,
           title: row.title,
           startDate: row.start_date,
           endDate: row.end_date,
-          active: !!row.active,
-          closed: !!row.closed,
+          active: !!row.market_active,
+          closed: !!row.market_closed,
           liquidity: row.liquidity,
           volume: row.volume,
           childMarkets: [],
         };
 
-        if (row.parent_market_id) {
+        if (row.child_id) {
           parent.childMarkets.push({
-            id: row.child_markets_id || '',
+            id: row.child_id,
+            parent_market_id: row.market_id,
             question: row.question || '',
             outcomes: JSON.parse(row.outcomes || '[]'),
             outcomePrices: JSON.parse(row.outcome_prices || '[]'),
-            volume: row.child_markets_volume || 0,
-            active: !!row.child_markets_active,
-            closed: !!row.child_markets_closed,
+            volume: row.child_volume || 0,
+            active: !!row.child_active,
+            closed: !!row.child_closed,
           });
         }
 
-        acc[row.id] = parent;
+        acc[row.market_id] = parent;
         return acc;
       },
       {}
