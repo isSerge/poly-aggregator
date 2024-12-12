@@ -1,59 +1,50 @@
 import { logger } from './logger.js';
 import { fetchCryptoMarkets } from './polymarket/polymarket.js';
-import {
-  saveCurrentMarkets,
-  getHistoricalData,
-  getLatestReport,
-  saveReport,
-} from './markets/markets.js';
+import { MarketRepository } from './markets/markets.js';
 import { analyzeTrendsWithLLM } from './llm/llm.js';
 import { handleError } from './utils.js';
+import { DatabaseManager } from './db/db.js';
 
 export async function main() {
+  const dbManager = new DatabaseManager();
+
   try {
-    logger.info('Starting the application...');
-
-    // Step 1: Fetch the latest market data
-    const currentMarkets = await fetchCryptoMarkets();
-
-    if (!currentMarkets || currentMarkets.length === 0) {
-      logger.warn('No market data fetched. Exiting the application.');
+    if (!dbManager.isHealthy()) {
+      logger.warn('Database connection failed. Exiting.');
       return;
     }
 
-    logger.info(`Fetched ${currentMarkets.length} crypto markets.`);
+    const marketRepository = new MarketRepository(dbManager);
 
-    // Step 2: Load historical data and the latest LLM report
-    const historicalMarkets = await getHistoricalData();
-    const latestReport = await getLatestReport();
+    const currentMarkets = await fetchCryptoMarkets();
+    if (!currentMarkets?.length) {
+      logger.warn('No market data fetched. Exiting.');
+      return;
+    }
 
-    const hasHistoricalData = historicalMarkets.length > 0;
+    const historicalMarkets = await marketRepository.getHistoricalData();
+    if (!historicalMarkets.length) return;
 
-    // If there is no historical data, skip the analysis
-    if (hasHistoricalData) {
-      // Step 3: Feed data to LLM for analysis
-      const analysis = await analyzeTrendsWithLLM(
-        currentMarkets,
-        historicalMarkets,
-        latestReport
-      );
+    logger.info(
+      `Fetched market data: ${currentMarkets.length}, ${historicalMarkets.length}`
+    );
 
-      // Step 4: Save the analysis and the current markets to the database
-      if (analysis && analysis.content) {
-        saveReport(analysis.content.toString());
-        logger.info('Report saved to the database.');
-        saveCurrentMarkets(currentMarkets);
-        logger.info('Current markets saved to the database.');
-      }
+    const latestReport = await marketRepository.getLatestReport();
 
-      logger.info('Analysis completed:');
-      logger.info(analysis.content);
+    const analysis = await analyzeTrendsWithLLM(
+      currentMarkets,
+      historicalMarkets,
+      latestReport
+    );
+
+    if (analysis?.content) {
+      marketRepository.saveReport(analysis.content.toString());
+      marketRepository.saveCurrentMarkets(currentMarkets);
+      logger.info(analysis.content, 'Analysis completed:');
     }
   } catch (error) {
-    handleError(
-      error,
-      'An error occurred while running the application. Exiting...'
-    );
-    process.exit(1);
+    handleError(error, 'Application error');
+  } finally {
+    dbManager.close();
   }
 }

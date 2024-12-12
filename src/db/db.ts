@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { Database as DatabaseType } from 'better-sqlite3';
+import type { Database as DatabaseType } from 'better-sqlite3';
 import fs from 'fs';
 import fsp from 'fs/promises';
 import path from 'path';
@@ -8,7 +8,7 @@ import { handleError } from '../utils.js';
 import { config } from '../config.js';
 import { fileURLToPath } from 'url';
 
-class DatabaseManager {
+export class DatabaseManager {
   private readonly db: DatabaseType;
   private readonly dbPath: string;
   private readonly dbDir: string;
@@ -19,6 +19,14 @@ class DatabaseManager {
     this.ensureDirectoryExists();
     this.db = this.createDatabaseConnection();
     this.initializeSchema();
+  }
+
+  public close() {
+    this.db.close();
+  }
+
+  public isHealthy(): boolean {
+    return this.db.open;
   }
 
   private ensureDirectoryExists() {
@@ -52,6 +60,4 @@ class DatabaseManager {
     return this.db;
   }
 }
-
-export const databaseManager = new DatabaseManager();
-export const db: DatabaseType = databaseManager.getConnection();
+export { DatabaseType };
