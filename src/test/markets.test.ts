@@ -165,8 +165,6 @@ describe('MarketRepository', () => {
 
     const historicalData = marketRepository.getHistoricalData();
 
-    console.log(JSON.stringify(historicalData, null, 2));
-
     assert.equal(historicalData.length, 1, 'Should retrieve one market');
     const market = historicalData[0];
     assert.equal(market.id, 'market3');
@@ -359,7 +357,7 @@ describe('MarketRepository', () => {
   it('should rollback transaction if an error occurs during saving markets', () => {
     const dbManager = getDbManager();
     const fkEnabled = dbManager.areForeignKeysEnabled();
-    console.log(`Foreign keys enabled: ${fkEnabled}`); // Should log: true
+
     assert.ok(
       fkEnabled,
       `Foreign keys should be enabled, but got: ${fkEnabled}`
@@ -399,7 +397,6 @@ describe('MarketRepository', () => {
       );
       //   eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      console.log(`Error Message: ${error.message}`); // Log the actual error message
       // Check if the error message matches the foreign key constraint violation
       assert.match(
         error.message,

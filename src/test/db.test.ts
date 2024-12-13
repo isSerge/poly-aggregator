@@ -155,8 +155,9 @@ describe('DatabaseManager', () => {
     const dbManager = new DatabaseManager(newDbPath);
     assert.ok(fs.existsSync(newDir), 'Directory should be created');
     dbManager.close();
+
     if (fs.existsSync(newDbPath)) {
-      fs.rmSync(newDbPath);
+      fs.rmSync(newDir, { recursive: true, force: true });
     }
   });
 
