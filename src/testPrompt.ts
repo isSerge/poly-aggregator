@@ -21,7 +21,7 @@ try {
   const reportRepository = new ReportRepository(dbManager);
 
   const currentMarkets = await fetchCryptoMarkets();
-  const historicalMarkets = await marketRepository.getHistoricalData();
+  const historicalMarkets = await marketRepository.getActiveMarkets();
   const latestReport = await reportRepository.getLatest();
 
   if (!currentMarkets?.length || !historicalMarkets?.length) {
