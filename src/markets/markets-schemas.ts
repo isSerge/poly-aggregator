@@ -32,13 +32,13 @@ export const MarketRowSchema = z.object({
   market_closed: z.number(),
   liquidity: z.number().nullable(),
   volume: z.number().nullable(),
-  child_id: z.string().optional(),
-  question: z.string().optional(),
-  outcomes: z.string().optional(),
-  outcome_prices: z.string().optional(),
-  child_volume: z.number().optional(),
-  child_active: z.number().optional(),
-  child_closed: z.number().optional(),
+  child_id: z.string().nullable().optional(),
+  question: z.string().nullable().optional(),
+  outcomes: z.string().nullable().optional(),
+  outcome_prices: z.string().nullable().optional(),
+  child_volume: z.number().nullable().optional(),
+  child_active: z.number().nullable().optional(),
+  child_closed: z.number().nullable().optional(),
 });
 
 export type MarketRow = z.infer<typeof MarketRowSchema>;

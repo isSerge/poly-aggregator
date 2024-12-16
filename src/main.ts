@@ -25,8 +25,16 @@ export async function main() {
       return;
     }
 
-    const historicalMarkets = await marketRepository.getHistoricalData();
-    if (!historicalMarkets.length) return;
+    const historicalMarkets = await marketRepository.getActiveMarkets();
+
+    marketRepository.saveMarkets(currentMarkets);
+
+    if (!historicalMarkets.length) {
+      logger.info(
+        'No historical markets found. Exiting after saving current markets.'
+      );
+      return;
+    }
 
     logger.info(
       `Fetched market data: current markets: ${currentMarkets.length}, historical markets: ${historicalMarkets.length}`
@@ -44,7 +52,6 @@ export async function main() {
 
     if (analysis?.content) {
       reportRepository.save(analysis.content.toString());
-      marketRepository.saveCurrentMarkets(currentMarkets);
       logger.info(analysis.content, 'Analysis completed:');
     }
   } catch (error) {

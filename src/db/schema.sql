@@ -26,3 +26,7 @@ CREATE TABLE IF NOT EXISTS reports (
   content TEXT NOT NULL,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Indexes for faster querying
+CREATE INDEX IF NOT EXISTS idx_markets_active_closed ON markets(active, closed);
+CREATE INDEX IF NOT EXISTS idx_child_markets_parent_id ON child_markets(parent_market_id);

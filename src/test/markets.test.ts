@@ -11,6 +11,10 @@ describe('MarketRepository', () => {
   beforeEach(() => {
     const dbManager = getDbManager();
     marketRepository = new MarketRepository(dbManager);
+
+    // Clear the database before each test
+    marketRepository['db'].prepare('DELETE FROM child_markets').run();
+    marketRepository['db'].prepare('DELETE FROM markets').run();
   });
 
   it('should save current markets without child markets', () => {
@@ -28,13 +32,13 @@ describe('MarketRepository', () => {
       },
     ];
 
-    marketRepository.saveCurrentMarkets(currentMarkets);
+    marketRepository.saveMarkets(currentMarkets);
 
     const db = getDbManager().getConnection();
 
     const savedMarket = db
       .prepare('SELECT * FROM markets WHERE id = ?')
-      //   eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .get('market1') as any;
 
     assert.ok(savedMarket, 'Inserted market should be retrieved');
@@ -87,7 +91,7 @@ describe('MarketRepository', () => {
       },
     ];
 
-    marketRepository.saveCurrentMarkets(currentMarkets);
+    marketRepository.saveMarkets(currentMarkets);
 
     const db = getDbManager().getConnection();
 
@@ -142,8 +146,8 @@ describe('MarketRepository', () => {
         title: 'Market 3',
         startDate: '2023-03-01',
         endDate: '2023-10-31',
-        active: false,
-        closed: true,
+        active: true,
+        closed: false,
         liquidity: 1500.0,
         volume: 7500.0,
         childMarkets: [
@@ -154,25 +158,25 @@ describe('MarketRepository', () => {
             outcomes: ['True', 'False'],
             outcomePrices: ['1.8', '2.2'],
             volume: 350.0,
-            active: false,
-            closed: true,
+            active: true,
+            closed: false,
           },
         ],
       },
     ];
 
-    marketRepository.saveCurrentMarkets(currentMarkets);
+    marketRepository.saveMarkets(currentMarkets);
 
-    const historicalData = marketRepository.getHistoricalData();
+    const historicalData = marketRepository.getActiveMarkets();
 
-    assert.equal(historicalData.length, 1, 'Should retrieve one market');
+    assert.equal(historicalData.length, 1, 'Should retrieve one active market');
     const market = historicalData[0];
     assert.equal(market.id, 'market3');
     assert.equal(market.title, 'Market 3');
     assert.equal(market.startDate, '2023-03-01');
     assert.equal(market.endDate, '2023-10-31');
-    assert.equal(market.active, false);
-    assert.equal(market.closed, true);
+    assert.equal(market.active, true);
+    assert.equal(market.closed, false);
     assert.equal(market.liquidity, 1500.0);
     assert.equal(market.volume, 7500.0);
     assert.equal(market.childMarkets.length, 1, 'Should have one child market');
@@ -183,8 +187,8 @@ describe('MarketRepository', () => {
       outcomes: ['True', 'False'],
       outcomePrices: ['1.8', '2.2'],
       volume: 350.0,
-      active: false,
-      closed: true,
+      active: true,
+      closed: false,
     });
   });
 
@@ -218,10 +222,10 @@ describe('MarketRepository', () => {
     ];
 
     // Insert initial market
-    marketRepository.saveCurrentMarkets(initialMarkets);
+    marketRepository.saveMarkets(initialMarkets);
 
     // Insert updated market
-    marketRepository.saveCurrentMarkets(updatedMarkets);
+    marketRepository.saveMarkets(updatedMarkets);
 
     const db = getDbManager().getConnection();
 
@@ -244,10 +248,10 @@ describe('MarketRepository', () => {
     const currentMarkets: ParentMarket[] = [];
 
     assert.doesNotThrow(() => {
-      marketRepository.saveCurrentMarkets(currentMarkets);
+      marketRepository.saveMarkets(currentMarkets);
     }, 'Saving an empty array should not throw an error');
 
-    const historicalData = marketRepository.getHistoricalData();
+    const historicalData = marketRepository.getActiveMarkets();
     assert.deepEqual(historicalData, [], 'Historical data should be empty');
   });
 
@@ -280,8 +284,8 @@ describe('MarketRepository', () => {
         title: 'Market 8',
         startDate: '2023-08-01',
         endDate: '2023-09-30',
-        active: false,
-        closed: true,
+        active: true,
+        closed: false,
         liquidity: 2100.0,
         volume: 10500.0,
         childMarkets: [
@@ -292,16 +296,16 @@ describe('MarketRepository', () => {
             outcomes: ['Yes', 'No', 'Maybe'],
             outcomePrices: ['1.7', '2.3', '3.0'],
             volume: 420.0,
-            active: false,
-            closed: true,
+            active: true,
+            closed: false,
           },
         ],
       },
     ];
 
-    marketRepository.saveCurrentMarkets(currentMarkets);
+    marketRepository.saveMarkets(currentMarkets);
 
-    const historicalData = marketRepository.getHistoricalData();
+    const historicalData = marketRepository.getActiveMarkets();
 
     assert.equal(historicalData.length, 2, 'Should retrieve two markets');
 
@@ -340,8 +344,8 @@ describe('MarketRepository', () => {
       outcomes: ['Yes', 'No', 'Maybe'],
       outcomePrices: ['1.7', '2.3', '3.0'],
       volume: 420.0,
-      active: false,
-      closed: true,
+      active: true,
+      closed: false,
     });
   });
 
@@ -390,7 +394,7 @@ describe('MarketRepository', () => {
 
     // Attempt to save faulty markets and expect an error
     try {
-      marketRepository.saveCurrentMarkets(faultyMarkets);
+      marketRepository.saveMarkets(faultyMarkets);
       // If no error is thrown, fail the test
       assert.fail(
         'Expected an error due to foreign key constraint violation, but none was thrown.'
@@ -423,6 +427,263 @@ describe('MarketRepository', () => {
       savedChild,
       undefined,
       'Child market should not be inserted due to rollback'
+    );
+  });
+
+  it('should ensure all inserted markets have closed set to 0', () => {
+    const currentMarkets: ParentMarket[] = [
+      {
+        id: 'market10',
+        title: 'Market 10',
+        startDate: '2023-10-01',
+        endDate: '2023-12-31',
+        active: true,
+        closed: false,
+        liquidity: 2200.0,
+        volume: 11000.0,
+        childMarkets: [],
+      },
+    ];
+
+    marketRepository.saveMarkets(currentMarkets);
+
+    const db = getDbManager().getConnection();
+
+    const savedMarket = db
+      .prepare('SELECT * FROM markets WHERE id = ?')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .get('market10') as any;
+
+    assert.ok(savedMarket, 'Inserted market should be retrieved');
+    assert.equal(savedMarket.closed, 0, 'Market10 should not be closed');
+  });
+
+  it('should save current markets and mark closed markets correctly', () => {
+    // Initial data: two active markets
+    const initialMarkets: ParentMarket[] = [
+      {
+        id: 'market1',
+        title: 'Market 1',
+        startDate: '2023-01-01',
+        endDate: '2023-12-31',
+        active: true,
+        closed: false,
+        liquidity: 1000,
+        volume: 5000,
+        childMarkets: [],
+      },
+      {
+        id: 'market2',
+        title: 'Market 2',
+        startDate: '2023-02-01',
+        endDate: '2023-11-30',
+        active: true,
+        closed: false,
+        liquidity: 800,
+        volume: 4000,
+        childMarkets: [],
+      },
+    ];
+
+    // Save initial markets
+    marketRepository.saveMarkets(initialMarkets);
+
+    // Verify that both markets are active and not closed
+    let activeMarkets = marketRepository.getActiveMarkets();
+    assert.equal(
+      activeMarkets.length,
+      2,
+      'Should have two active markets initially'
+    );
+
+    // Update markets: remove 'market2' to simulate closure
+    const updatedMarkets: ParentMarket[] = [
+      {
+        id: 'market1',
+        title: 'Market 1',
+        startDate: '2023-01-01',
+        endDate: '2023-12-31',
+        active: true,
+        closed: false,
+        liquidity: 1000,
+        volume: 5000,
+        childMarkets: [],
+      },
+    ];
+
+    // Save updated markets
+    marketRepository.saveMarkets(updatedMarkets);
+
+    // Verify that 'market1' remains active
+    activeMarkets = marketRepository.getActiveMarkets();
+    assert.equal(
+      activeMarkets.length,
+      1,
+      'Should have one active market after update'
+    );
+    assert.equal(
+      activeMarkets[0].id,
+      'market1',
+      'Active market should be market1'
+    );
+
+    // Verify that 'market2' is deleted from the database
+
+    const closedMarket = marketRepository['db']
+      .prepare(`SELECT * FROM markets WHERE id = ?`)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .get('market2') as any;
+
+    assert.equal(
+      closedMarket,
+      undefined,
+      'Market2 should be deleted from the database'
+    );
+  });
+
+  it('should mark all markets as closed when currentMarkets is empty', () => {
+    // Initial data: two active markets
+    const initialMarkets: ParentMarket[] = [
+      {
+        id: 'market1',
+        title: 'Market 1',
+        startDate: '2023-01-01',
+        endDate: '2023-12-31',
+        active: true,
+        closed: false,
+        liquidity: 1000,
+        volume: 5000,
+        childMarkets: [],
+      },
+      {
+        id: 'market2',
+        title: 'Market 2',
+        startDate: '2023-02-01',
+        endDate: '2023-11-30',
+        active: true,
+        closed: false,
+        liquidity: 800,
+        volume: 4000,
+        childMarkets: [],
+      },
+    ];
+
+    // Save initial markets
+    marketRepository.saveMarkets(initialMarkets);
+
+    // Verify that both markets are active
+    let activeMarkets = marketRepository.getActiveMarkets();
+    assert.equal(
+      activeMarkets.length,
+      2,
+      'Should have two active markets initially'
+    );
+
+    // Update markets with empty array to simulate closure of all markets
+    const updatedMarkets: ParentMarket[] = [];
+
+    // Save updated markets
+    marketRepository.saveMarkets(updatedMarkets);
+
+    // Verify that no markets are active
+    activeMarkets = marketRepository.getActiveMarkets();
+    assert.equal(
+      activeMarkets.length,
+      0,
+      'Should have no active markets after update'
+    );
+
+    // Verify that closed markets are deleted from the database
+
+    const market1 = marketRepository['db']
+      .prepare(`SELECT * FROM markets WHERE id = ?`)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .get('market1') as any;
+
+    const market2 = marketRepository['db']
+      .prepare(`SELECT * FROM markets WHERE id = ?`)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .get('market2') as any;
+
+    assert.equal(
+      market1,
+      undefined,
+      'Market1 should be deleted from the database'
+    );
+    assert.equal(
+      market2,
+      undefined,
+      'Market2 should be deleted from the database'
+    );
+  });
+
+  it('should handle child markets correctly when marking parents as closed', () => {
+    // Initial data: one active market with one child market
+    const initialMarkets: ParentMarket[] = [
+      {
+        id: 'market1',
+        title: 'Market 1',
+        startDate: '2023-01-01',
+        endDate: '2023-12-31',
+        active: true,
+        closed: false,
+        liquidity: 1000,
+        volume: 5000,
+        childMarkets: [
+          {
+            id: 'child1',
+            parent_market_id: 'market1',
+            question: 'Child Market 1',
+            outcomes: ['Yes', 'No'],
+            outcomePrices: ['1.5', '2.5'],
+            volume: 1000,
+            active: true,
+            closed: false,
+          },
+        ],
+      },
+    ];
+
+    // Save initial markets
+    marketRepository.saveMarkets(initialMarkets);
+
+    // Verify that the child market is active
+    let activeMarkets = marketRepository.getActiveMarkets();
+    assert.equal(
+      activeMarkets.length,
+      1,
+      'Should have one active market initially'
+    );
+    assert.equal(
+      activeMarkets[0].childMarkets.length,
+      1,
+      'Market1 should have one active child market'
+    );
+
+    // Update markets: remove the parent market to simulate closure
+    const updatedMarkets: ParentMarket[] = [];
+
+    // Save updated markets
+    marketRepository.saveMarkets(updatedMarkets);
+
+    // Verify that no markets are active
+    activeMarkets = marketRepository.getActiveMarkets();
+    assert.equal(
+      activeMarkets.length,
+      0,
+      'Should have no active markets after update'
+    );
+
+    // Verify that the child market is deleted from the database
+    const closedChildMarket = marketRepository['db']
+      .prepare(`SELECT * FROM child_markets WHERE id = ?`)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .get('child1') as any;
+
+    assert.equal(
+      closedChildMarket,
+      undefined,
+      'Market1 should be deleted from the database'
     );
   });
 });
