@@ -3,12 +3,11 @@ import { logger } from './logger.js';
 import { MarketRepository } from './markets/markets.js';
 import { ReportRepository } from './reports/reports.js';
 import { fetchCryptoMarkets } from './polymarket/polymarket.js';
-import { analyzePredictionMarkets } from './reports/llm.js';
 import { handleError } from './utils.js';
+import { formatPrompt } from './reports/prompt.js';
 
 /**
- * Test script to analyze market trends using LLM without saving results.
- * Useful for testing prompt changes and validating LLM output.
+ * Test script to generate prompt without feeding it to LLM and saving results.
  */
 const dbManager = new DatabaseManager();
 
@@ -34,15 +33,10 @@ try {
     `Fetched: current markets: ${currentMarkets.length}, historical: ${historicalMarkets.length}`
   );
 
-  const analysis = await analyzePredictionMarkets(
-    currentMarkets,
-    historicalMarkets,
-    latestReport
-  );
+  const prompt = formatPrompt(currentMarkets, historicalMarkets, latestReport);
 
-  if (analysis?.content) {
-    logger.info('Analysis:', analysis.content);
-  }
+  logger.info('Prompt: ');
+  logger.info(prompt);
 } catch (error) {
   handleError(error, 'Analysis test failed');
   process.exit(1);
