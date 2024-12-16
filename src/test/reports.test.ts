@@ -1,5 +1,3 @@
-// src/test/reports.test.ts
-
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import * as assert from 'node:assert/strict';
 import { ReportRepository } from '../reports/reports.js';
