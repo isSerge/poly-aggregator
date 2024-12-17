@@ -51,7 +51,7 @@ Focus on:
 
 **Output Format**:
 
----
+Date: ${new Date().toISOString()}
 
 ### Assets ###
 - **[Asset Name]**
