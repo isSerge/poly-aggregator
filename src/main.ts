@@ -25,26 +25,26 @@ export async function main() {
       return;
     }
 
-    const historicalMarkets = await marketRepository.getActiveMarkets();
+    const previousMarketsData = await marketRepository.getActiveMarkets();
 
     marketRepository.saveMarkets(currentMarkets);
 
-    if (!historicalMarkets.length) {
+    if (!previousMarketsData.length) {
       logger.info(
-        'No historical markets found. Exiting after saving current markets.'
+        'No previous markets found. Exiting after saving current markets.'
       );
       return;
     }
 
     logger.info(
-      `Fetched market data: current markets: ${currentMarkets.length}, historical markets: ${historicalMarkets.length}`
+      `Fetched market data: current markets: ${currentMarkets.length}, previous markets: ${previousMarketsData.length}`
     );
 
     const latestReport = await reportRepository.getLatest();
 
     const prompt = formatPrompt(
       currentMarkets,
-      historicalMarkets,
+      previousMarketsData,
       latestReport
     );
 

@@ -139,7 +139,7 @@ describe('MarketRepository', () => {
     assert.equal(savedChild2.closed, 0);
   });
 
-  it('should retrieve historical data correctly', () => {
+  it('should retrieve previous data correctly', () => {
     const currentMarkets: ParentMarket[] = [
       {
         id: 'market3',
@@ -167,10 +167,14 @@ describe('MarketRepository', () => {
 
     marketRepository.saveMarkets(currentMarkets);
 
-    const historicalData = marketRepository.getActiveMarkets();
+    const previousMarketsData = marketRepository.getActiveMarkets();
 
-    assert.equal(historicalData.length, 1, 'Should retrieve one active market');
-    const market = historicalData[0];
+    assert.equal(
+      previousMarketsData.length,
+      1,
+      'Should retrieve one active market'
+    );
+    const market = previousMarketsData[0];
     assert.equal(market.id, 'market3');
     assert.equal(market.title, 'Market 3');
     assert.equal(market.startDate, '2023-03-01');
@@ -251,8 +255,8 @@ describe('MarketRepository', () => {
       marketRepository.saveMarkets(currentMarkets);
     }, 'Saving an empty array should not throw an error');
 
-    const historicalData = marketRepository.getActiveMarkets();
-    assert.deepEqual(historicalData, [], 'Historical data should be empty');
+    const previousMarketsData = marketRepository.getActiveMarkets();
+    assert.deepEqual(previousMarketsData, [], 'Previous data should be empty');
   });
 
   it('should save and retrieve multiple markets with child markets', () => {
@@ -305,12 +309,12 @@ describe('MarketRepository', () => {
 
     marketRepository.saveMarkets(currentMarkets);
 
-    const historicalData = marketRepository.getActiveMarkets();
+    const previousMarketsData = marketRepository.getActiveMarkets();
 
-    assert.equal(historicalData.length, 2, 'Should retrieve two markets');
+    assert.equal(previousMarketsData.length, 2, 'Should retrieve two markets');
 
-    const market7 = historicalData.find((m) => m.id === 'market7');
-    const market8 = historicalData.find((m) => m.id === 'market8');
+    const market7 = previousMarketsData.find((m) => m.id === 'market7');
+    const market8 = previousMarketsData.find((m) => m.id === 'market8');
 
     assert.ok(market7, 'Market 7 should exist');
     assert.equal(market7?.title, 'Market 7');

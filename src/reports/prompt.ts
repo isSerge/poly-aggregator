@@ -29,21 +29,21 @@ ${
 
 export function formatPrompt(
   currentMarkets: ParentMarket[],
-  historicalMarkets: ParentMarket[],
+  previousMarkets: ParentMarket[],
   latestReport: string | null
 ): string {
   return `
 ### Latest Report ###
 ${latestReport || 'No previous report available.'}
 
-### Historical Market Data ###
-${historicalMarkets.map(formatMarketForPrompt).join('\n')}
+### Previous Market Data ###
+${previousMarkets.map(formatMarketForPrompt).join('\n')}
 
 ### Current Market Data ###
 ${currentMarkets.map(formatMarketForPrompt).join('\n')}
 
 ### Task ###
-Provide a detailed analysis of the current market data compared to the historical market data.
+Provide a detailed analysis of the current market data compared to the previous market data.
 
 Focus on:
 1. Markets with the **highest volume and liquidity**.
@@ -55,9 +55,9 @@ Date: ${new Date().toISOString()}
 
 ### Assets ###
 - **[Asset Name]**
-- **Long-term:** [Analysis with probabilities and trends from historical data].
-- **Mid-term:** [Analysis with probabilities and trends from historical data].
-- **Short-term:** [Analysis with probabilities and trends from historical data].
+- **Long-term:** [Analysis with probabilities and trends from previous data].
+- **Mid-term:** [Analysis with probabilities and trends from previous data].
+- **Short-term:** [Analysis with probabilities and trends from previous data].
 
 ### Additional Insights ###
 #### **Airdrops**:
@@ -97,8 +97,8 @@ Date: ${new Date().toISOString()}
 - **No:** 99.65%.  
 - Likelihood: Highly unlikely.
 
-2. **Historical Trends**:
-- Compare probabilities with historical data and highlight changes (e.g., "up from 30% to 40%" or "trend unchanged").
+2. **Trends**:
+- Compare probabilities with previous data and highlight changes (e.g., "up from 30% to 40%" or "trend unchanged").
 
 3. **Focus Areas**:
 - Prioritize markets with the **most volume and liquidity**.

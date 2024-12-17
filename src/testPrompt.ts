@@ -21,19 +21,19 @@ try {
   const reportRepository = new ReportRepository(dbManager);
 
   const currentMarkets = await fetchCryptoMarkets();
-  const historicalMarkets = await marketRepository.getActiveMarkets();
+  const previousMarkets = await marketRepository.getActiveMarkets();
   const latestReport = await reportRepository.getLatest();
 
-  if (!currentMarkets?.length || !historicalMarkets?.length) {
+  if (!currentMarkets?.length || !previousMarkets?.length) {
     logger.warn('Insufficient market data');
     process.exit(1);
   }
 
   logger.info(
-    `Fetched: current markets: ${currentMarkets.length}, historical: ${historicalMarkets.length}`
+    `Fetched: current markets: ${currentMarkets.length}, previous: ${previousMarkets.length}`
   );
 
-  const prompt = formatPrompt(currentMarkets, historicalMarkets, latestReport);
+  const prompt = formatPrompt(currentMarkets, previousMarkets, latestReport);
 
   logger.info('Prompt: ');
   logger.info(prompt);
