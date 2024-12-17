@@ -84,7 +84,7 @@ export class MarketRepository {
       // Delete closed markets after all insertions/updates
       if (currentMarketIds.length > 0) {
         deleteClosedMarkets.run(...currentMarketIds);
-        logger.info('Deleted closed markets');
+        logger.info(`Deleted closed markets: ${currentMarketIds.join(', ')}`);
       } else {
         deleteClosedMarkets.run();
         logger.info('Deleted all markets');
