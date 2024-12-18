@@ -30,6 +30,13 @@ ${
 ------------------`.trim();
 }
 
+/**
+ * Formats the prompt for the analysis task.
+ * @param currentMarkets - The current market data.
+ * @param previousMarkets - The previous market data.
+ * @param latestReport - The latest report text.
+ * @returns The formatted prompt text.
+ */
 export function formatPrompt(
   currentMarkets: ParentMarket[],
   previousMarkets: ParentMarket[],
