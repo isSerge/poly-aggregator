@@ -17,14 +17,17 @@ ${
     ? market.childMarkets
         .map(
           (child) => `
-* ${child.question}
-- Outcome Prices: ${child.outcomePrices.join(', ')}
-- Volume: ${child.volume}`
+-- Market ID: ${child.id}
+-- Title: ${child.question}
+-- Outcomes: ${child.outcomes.join(', ')}
+-- Outcome Prices: ${child.outcomePrices.join(', ')}
+-- Volume: ${child.volume}
+`
         )
         .join('')
     : 'None'
 }
-`.trim();
+------------------`.trim();
 }
 
 export function formatPrompt(

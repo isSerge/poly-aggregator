@@ -35,9 +35,13 @@ describe('Prompt Module', () => {
 - Volume: 5000
 - Child Markets:
 
-* What will be the price of BTC in 6 months?
-- Outcome Prices: 0.6, 0.4
-- Volume: 200
+-- Market ID: child1
+-- Title: What will be the price of BTC in 6 months?
+-- Outcomes: $50,000, $60,000
+-- Outcome Prices: 0.6, 0.4
+-- Volume: 200
+
+------------------
 `;
 
     const formatted = formatMarketForPrompt(mockMarket);
@@ -68,6 +72,7 @@ describe('Prompt Module', () => {
 - Volume: 4000
 - Child Markets:
 None
+------------------
 `;
 
     const formatted = formatMarketForPrompt(mockMarket);
