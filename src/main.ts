@@ -27,8 +27,6 @@ export async function main() {
 
     const previousMarketsData = await marketRepository.getActiveMarkets();
 
-    console.log('previousMarketsData', previousMarketsData);
-
     marketRepository.saveMarkets(currentMarkets);
 
     if (!previousMarketsData.length) {
