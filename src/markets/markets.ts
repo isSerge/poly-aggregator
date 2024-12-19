@@ -27,20 +27,19 @@ export class MarketRepository {
         `DELETE FROM markets WHERE id NOT IN (${placeholders})`
       );
     } else {
-      // If no current markets, delete all markets
       return this.db.prepare(`DELETE FROM markets`);
     }
   }
 
   public saveMarkets(currentMarkets: ParentMarket[]) {
     const insertMarket = this.db.prepare(`
-      INSERT OR REPLACE INTO markets (id, title, start_date, end_date, active, closed, liquidity, volume)
-      VALUES (@id, @title, @start_date, @end_date, @active, @closed, @liquidity, @volume)
+      INSERT OR REPLACE INTO markets (id, title, start_date, end_date, liquidity, volume)
+      VALUES (@id, @title, @start_date, @end_date, @liquidity, @volume)
     `);
 
     const insertChildMarket = this.db.prepare(`
-      INSERT OR REPLACE INTO child_markets (id, parent_market_id, question, outcomes, outcome_prices, volume, active, closed)
-      VALUES (@id, @parent_market_id, @question, @outcomes, @outcome_prices, @volume, @active, @closed)
+      INSERT OR REPLACE INTO child_markets (id, parent_market_id, question, outcomes, outcome_prices, volume)
+      VALUES (@id, @parent_market_id, @question, @outcomes, @outcome_prices, @volume)
     `);
 
     // Extract current market IDs
@@ -57,8 +56,6 @@ export class MarketRepository {
           title: market.title,
           start_date: market.startDate,
           end_date: market.endDate,
-          active: market.active ? 1 : 0,
-          closed: market.closed ? 1 : 0,
           liquidity: market.liquidity,
           volume: market.volume,
         });
@@ -72,8 +69,6 @@ export class MarketRepository {
             outcomes: JSON.stringify(childMarket.outcomes),
             outcome_prices: JSON.stringify(childMarket.outcomePrices),
             volume: childMarket.volume,
-            active: childMarket.active ? 1 : 0,
-            closed: childMarket.closed ? 1 : 0,
           });
           logger.info(
             `Inserted/Updated child market with ID: ${childMarket.id}`
@@ -97,7 +92,7 @@ export class MarketRepository {
         'Successfully saved current markets and removed closed markets'
       );
     } catch (error) {
-      logger.error(error, 'Transaction failed and was rolled back');
+      logger.error('Transaction failed and was rolled back');
       throw error;
     }
   }
@@ -111,25 +106,20 @@ export class MarketRepository {
         markets.title,
         markets.start_date,
         markets.end_date,
-        markets.active AS market_active,
-        markets.closed AS market_closed,
         markets.liquidity,
         markets.volume,
         child_markets.id AS child_id,
         child_markets.question,
         child_markets.outcomes,
         child_markets.outcome_prices,
-        child_markets.volume AS child_volume,
-        child_markets.active AS child_active,
-        child_markets.closed AS child_closed
+        child_markets.volume AS child_volume
       FROM markets
       LEFT JOIN child_markets ON markets.id = child_markets.parent_market_id
-      WHERE markets.active = 1 AND markets.closed = 0
     `
       )
       .all();
 
-    const { validRows, invalidRows }: ValidationResult<MarketRow> = rows.reduce(
+    const { validRows, invalidRows } = rows.reduce(
       (acc: ValidationResult<MarketRow>, row: unknown) => {
         const result = MarketRowSchema.safeParse(row);
         if (result.success) {
@@ -147,7 +137,6 @@ export class MarketRepository {
         invalidRows,
         'Some rows failed validation in getPreviousMarketData:'
       );
-      // TODO: consider throwing an error
     }
 
     const markets = validRows.reduce(
@@ -157,10 +146,8 @@ export class MarketRepository {
           title: row.title,
           startDate: row.start_date,
           endDate: row.end_date,
-          active: !!row.market_active,
-          closed: !!row.market_closed,
-          liquidity: row.liquidity,
-          volume: row.volume,
+          liquidity: row.liquidity || 0,
+          volume: row.volume || 0,
           childMarkets: [],
         };
 
@@ -172,8 +159,6 @@ export class MarketRepository {
             outcomes: JSON.parse(row.outcomes || '[]'),
             outcomePrices: JSON.parse(row.outcome_prices || '[]'),
             volume: row.child_volume || 0,
-            active: !!row.child_active,
-            closed: !!row.child_closed,
           });
         }
 

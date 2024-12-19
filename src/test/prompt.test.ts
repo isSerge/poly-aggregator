@@ -10,8 +10,6 @@ describe('Prompt Module', () => {
       title: 'Market 1',
       startDate: '2023-01-01',
       endDate: '2023-12-31',
-      active: true,
-      closed: false,
       liquidity: 1000.0,
       volume: 5000.0,
       childMarkets: [
@@ -22,8 +20,6 @@ describe('Prompt Module', () => {
           outcomes: ['$50,000', '$60,000'],
           outcomePrices: ['0.6', '0.4'],
           volume: 200.0,
-          active: true,
-          closed: false,
         },
       ],
     };
@@ -58,8 +54,6 @@ describe('Prompt Module', () => {
       title: 'Market 2',
       startDate: '2023-02-01',
       endDate: '2023-11-30',
-      active: true,
-      closed: false,
       liquidity: 800.0,
       volume: 4000.0,
       childMarkets: [],

@@ -13,34 +13,20 @@ import {
 export const toStreamlinedMarket = (
   apiResponse: ApiParentMarket
 ): ParentMarket => {
-  // Using Zod's transform capabilities, the fields are already parsed and transformed.
-  // Therefore, we can directly map the fields without manual parsing.
-
-  // Filter out closed child markets
-  const filteredChildMarkets = apiResponse.markets.filter(
-    (market) => !market.closed
-  );
-
-  // Map to internal ChildMarket type
-  const childMarkets = filteredChildMarkets.map((market) => ({
+  const childMarkets = apiResponse.markets.map((market) => ({
     id: market.id,
     parent_market_id: apiResponse.id,
     question: market.question,
     outcomes: market.outcomes,
     outcomePrices: market.outcomePrices,
     volume: market.volume || 0,
-    active: market.active,
-    closed: market.closed,
   }));
 
-  // Create the ParentMarket object
   const parentMarket: ParentMarket = {
     id: apiResponse.id,
     title: apiResponse.title,
     startDate: apiResponse.startDate,
     endDate: apiResponse.endDate,
-    active: apiResponse.active,
-    closed: apiResponse.closed,
     liquidity: apiResponse.liquidity,
     volume: apiResponse.volume || 0,
     childMarkets,

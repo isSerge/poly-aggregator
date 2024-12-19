@@ -24,8 +24,6 @@ describe('MarketRepository', () => {
         title: 'Market 1',
         startDate: '2023-01-01',
         endDate: '2023-12-31',
-        active: true,
-        closed: false,
         liquidity: 1000.0,
         volume: 5000.0,
         childMarkets: [],
@@ -43,8 +41,6 @@ describe('MarketRepository', () => {
 
     assert.ok(savedMarket, 'Inserted market should be retrieved');
     assert.equal(savedMarket.title, 'Market 1');
-    assert.equal(savedMarket.active, 1);
-    assert.equal(savedMarket.closed, 0);
     assert.equal(savedMarket.liquidity, 1000.0);
     assert.equal(savedMarket.volume, 5000.0);
 
@@ -62,8 +58,6 @@ describe('MarketRepository', () => {
         title: 'Market 2',
         startDate: '2023-02-01',
         endDate: '2023-11-30',
-        active: true,
-        closed: false,
         liquidity: 2000.0,
         volume: 10000.0,
         childMarkets: [
@@ -74,8 +68,6 @@ describe('MarketRepository', () => {
             outcomes: ['Yes', 'No'],
             outcomePrices: ['1.5', '2.5'],
             volume: 300.0,
-            active: true,
-            closed: false,
           },
           {
             id: 'child2',
@@ -84,8 +76,6 @@ describe('MarketRepository', () => {
             outcomes: ['Option A', 'Option B'],
             outcomePrices: ['2.0', '3.0'],
             volume: 400.0,
-            active: true,
-            closed: false,
           },
         ],
       },
@@ -112,8 +102,6 @@ describe('MarketRepository', () => {
 
     assert.ok(savedMarket, 'Inserted market should be retrieved');
     assert.equal(savedMarket.title, 'Market 2');
-    assert.equal(savedMarket.active, 1);
-    assert.equal(savedMarket.closed, 0);
     assert.equal(savedMarket.liquidity, 2000.0);
     assert.equal(savedMarket.volume, 10000.0);
 
@@ -123,8 +111,6 @@ describe('MarketRepository', () => {
     assert.equal(savedChild1.outcomes, JSON.stringify(['Yes', 'No']));
     assert.equal(savedChild1.outcome_prices, JSON.stringify(['1.5', '2.5']));
     assert.equal(savedChild1.volume, 300.0);
-    assert.equal(savedChild1.active, 1);
-    assert.equal(savedChild1.closed, 0);
 
     assert.ok(savedChild2, 'Inserted child market2 should be retrieved');
     assert.equal(savedChild2.parent_market_id, 'market2');
@@ -135,8 +121,6 @@ describe('MarketRepository', () => {
     );
     assert.equal(savedChild2.outcome_prices, JSON.stringify(['2.0', '3.0']));
     assert.equal(savedChild2.volume, 400.0);
-    assert.equal(savedChild2.active, 1);
-    assert.equal(savedChild2.closed, 0);
   });
 
   it('should retrieve previous data correctly', () => {
@@ -146,8 +130,6 @@ describe('MarketRepository', () => {
         title: 'Market 3',
         startDate: '2023-03-01',
         endDate: '2023-10-31',
-        active: true,
-        closed: false,
         liquidity: 1500.0,
         volume: 7500.0,
         childMarkets: [
@@ -158,8 +140,6 @@ describe('MarketRepository', () => {
             outcomes: ['True', 'False'],
             outcomePrices: ['1.8', '2.2'],
             volume: 350.0,
-            active: true,
-            closed: false,
           },
         ],
       },
@@ -169,18 +149,12 @@ describe('MarketRepository', () => {
 
     const previousMarketsData = marketRepository.getActiveMarkets();
 
-    assert.equal(
-      previousMarketsData.length,
-      1,
-      'Should retrieve one active market'
-    );
+    assert.equal(previousMarketsData.length, 1, 'Should retrieve one market');
     const market = previousMarketsData[0];
     assert.equal(market.id, 'market3');
     assert.equal(market.title, 'Market 3');
     assert.equal(market.startDate, '2023-03-01');
     assert.equal(market.endDate, '2023-10-31');
-    assert.equal(market.active, true);
-    assert.equal(market.closed, false);
     assert.equal(market.liquidity, 1500.0);
     assert.equal(market.volume, 7500.0);
     assert.equal(market.childMarkets.length, 1, 'Should have one child market');
@@ -191,8 +165,6 @@ describe('MarketRepository', () => {
       outcomes: ['True', 'False'],
       outcomePrices: ['1.8', '2.2'],
       volume: 350.0,
-      active: true,
-      closed: false,
     });
   });
 
@@ -203,8 +175,6 @@ describe('MarketRepository', () => {
         title: 'Market 4',
         startDate: '2023-04-01',
         endDate: '2023-09-30',
-        active: true,
-        closed: false,
         liquidity: 2500.0,
         volume: 12500.0,
         childMarkets: [],
@@ -217,8 +187,6 @@ describe('MarketRepository', () => {
         title: 'Market 4 Updated',
         startDate: '2023-04-15',
         endDate: '2023-10-15',
-        active: false,
-        closed: true,
         liquidity: 3000.0,
         volume: 15000.0,
         childMarkets: [],
@@ -242,8 +210,6 @@ describe('MarketRepository', () => {
     assert.equal(savedMarket.title, 'Market 4 Updated');
     assert.equal(savedMarket.start_date, '2023-04-15');
     assert.equal(savedMarket.end_date, '2023-10-15');
-    assert.equal(savedMarket.active, 0);
-    assert.equal(savedMarket.closed, 1);
     assert.equal(savedMarket.liquidity, 3000.0);
     assert.equal(savedMarket.volume, 15000.0);
   });
@@ -266,8 +232,6 @@ describe('MarketRepository', () => {
         title: 'Market 7',
         startDate: '2023-07-01',
         endDate: '2023-12-31',
-        active: true,
-        closed: false,
         liquidity: 1900.0,
         volume: 9500.0,
         childMarkets: [
@@ -278,8 +242,6 @@ describe('MarketRepository', () => {
             outcomes: ['Option 1', 'Option 2'],
             outcomePrices: ['1.6', '2.4'],
             volume: 360.0,
-            active: true,
-            closed: false,
           },
         ],
       },
@@ -288,8 +250,6 @@ describe('MarketRepository', () => {
         title: 'Market 8',
         startDate: '2023-08-01',
         endDate: '2023-09-30',
-        active: true,
-        closed: false,
         liquidity: 2100.0,
         volume: 10500.0,
         childMarkets: [
@@ -300,8 +260,6 @@ describe('MarketRepository', () => {
             outcomes: ['Yes', 'No', 'Maybe'],
             outcomePrices: ['1.7', '2.3', '3.0'],
             volume: 420.0,
-            active: true,
-            closed: false,
           },
         ],
       },
@@ -330,8 +288,6 @@ describe('MarketRepository', () => {
       outcomes: ['Option 1', 'Option 2'],
       outcomePrices: ['1.6', '2.4'],
       volume: 360.0,
-      active: true,
-      closed: false,
     });
 
     assert.ok(market8, 'Market 8 should exist');
@@ -348,8 +304,6 @@ describe('MarketRepository', () => {
       outcomes: ['Yes', 'No', 'Maybe'],
       outcomePrices: ['1.7', '2.3', '3.0'],
       volume: 420.0,
-      active: true,
-      closed: false,
     });
   });
 
@@ -377,8 +331,6 @@ describe('MarketRepository', () => {
         title: 'Market 6',
         startDate: '2023-06-01',
         endDate: '2023-07-31',
-        active: true,
-        closed: false,
         liquidity: 2200.0,
         volume: 11000.0,
         childMarkets: [
@@ -389,8 +341,6 @@ describe('MarketRepository', () => {
             outcomes: ['Option X', 'Option Y'],
             outcomePrices: ['2.0', '3.0'], // Kept as strings
             volume: 500.0,
-            active: true,
-            closed: false,
           },
         ],
       },
@@ -441,8 +391,6 @@ describe('MarketRepository', () => {
         title: 'Market 10',
         startDate: '2023-10-01',
         endDate: '2023-12-31',
-        active: true,
-        closed: false,
         liquidity: 2200.0,
         volume: 11000.0,
         childMarkets: [],
@@ -459,19 +407,16 @@ describe('MarketRepository', () => {
       .get('market10') as any;
 
     assert.ok(savedMarket, 'Inserted market should be retrieved');
-    assert.equal(savedMarket.closed, 0, 'Market10 should not be closed');
   });
 
   it('should save current markets and mark closed markets correctly', () => {
-    // Initial data: two active markets
+    // Initial data: two markets
     const initialMarkets: ParentMarket[] = [
       {
         id: 'market1',
         title: 'Market 1',
         startDate: '2023-01-01',
         endDate: '2023-12-31',
-        active: true,
-        closed: false,
         liquidity: 1000,
         volume: 5000,
         childMarkets: [],
@@ -481,8 +426,6 @@ describe('MarketRepository', () => {
         title: 'Market 2',
         startDate: '2023-02-01',
         endDate: '2023-11-30',
-        active: true,
-        closed: false,
         liquidity: 800,
         volume: 4000,
         childMarkets: [],
@@ -492,7 +435,7 @@ describe('MarketRepository', () => {
     // Save initial markets
     marketRepository.saveMarkets(initialMarkets);
 
-    // Verify that both markets are active and not closed
+    // Verify that both markets are in the database
     let activeMarkets = marketRepository.getActiveMarkets();
     assert.equal(
       activeMarkets.length,
@@ -507,8 +450,6 @@ describe('MarketRepository', () => {
         title: 'Market 1',
         startDate: '2023-01-01',
         endDate: '2023-12-31',
-        active: true,
-        closed: false,
         liquidity: 1000,
         volume: 5000,
         childMarkets: [],
@@ -518,12 +459,12 @@ describe('MarketRepository', () => {
     // Save updated markets
     marketRepository.saveMarkets(updatedMarkets);
 
-    // Verify that 'market1' remains active
+    // Verify that 'market1' remains in the database
     activeMarkets = marketRepository.getActiveMarkets();
     assert.equal(
       activeMarkets.length,
       1,
-      'Should have one active market after update'
+      'Should have one market after update'
     );
     assert.equal(
       activeMarkets[0].id,
@@ -546,15 +487,13 @@ describe('MarketRepository', () => {
   });
 
   it('should mark all markets as closed when currentMarkets is empty', () => {
-    // Initial data: two active markets
+    // Initial data: two markets
     const initialMarkets: ParentMarket[] = [
       {
         id: 'market1',
         title: 'Market 1',
         startDate: '2023-01-01',
         endDate: '2023-12-31',
-        active: true,
-        closed: false,
         liquidity: 1000,
         volume: 5000,
         childMarkets: [],
@@ -564,8 +503,6 @@ describe('MarketRepository', () => {
         title: 'Market 2',
         startDate: '2023-02-01',
         endDate: '2023-11-30',
-        active: true,
-        closed: false,
         liquidity: 800,
         volume: 4000,
         childMarkets: [],
@@ -629,8 +566,6 @@ describe('MarketRepository', () => {
         title: 'Market 1',
         startDate: '2023-01-01',
         endDate: '2023-12-31',
-        active: true,
-        closed: false,
         liquidity: 1000,
         volume: 5000,
         childMarkets: [
@@ -641,8 +576,6 @@ describe('MarketRepository', () => {
             outcomes: ['Yes', 'No'],
             outcomePrices: ['1.5', '2.5'],
             volume: 1000,
-            active: true,
-            closed: false,
           },
         ],
       },

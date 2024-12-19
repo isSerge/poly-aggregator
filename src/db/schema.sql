@@ -3,8 +3,6 @@ CREATE TABLE IF NOT EXISTS markets (
   title TEXT NOT NULL,
   start_date TEXT,
   end_date TEXT,
-  active INTEGER NOT NULL,
-  closed INTEGER NOT NULL,
   liquidity REAL,
   volume REAL
 );
@@ -16,8 +14,6 @@ CREATE TABLE IF NOT EXISTS child_markets (
   outcomes TEXT NOT NULL,
   outcome_prices TEXT NOT NULL,
   volume REAL,
-  active INTEGER NOT NULL,
-  closed INTEGER NOT NULL,
   FOREIGN KEY (parent_market_id) REFERENCES markets(id) ON DELETE CASCADE
 );
 
@@ -27,6 +23,5 @@ CREATE TABLE IF NOT EXISTS reports (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes for faster querying
-CREATE INDEX IF NOT EXISTS idx_markets_active_closed ON markets(active, closed);
+-- Create indexes
 CREATE INDEX IF NOT EXISTS idx_child_markets_parent_id ON child_markets(parent_market_id);

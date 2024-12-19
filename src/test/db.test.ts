@@ -38,11 +38,11 @@ describe('DatabaseManager', () => {
     const db = dbManager.getConnection();
 
     const insertStmt = db.prepare(`
-      INSERT INTO markets (id, title, active, closed, liquidity, volume)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO markets (id, title, liquidity, volume)
+      VALUES (?, ?, ?, ?)
     `);
     const marketId = 'market1';
-    insertStmt.run(marketId, 'Test Market', 1, 0, 1000.5, 5000.75);
+    insertStmt.run(marketId, 'Test Market', 1000.5, 5000.75);
 
     const selectStmt = db.prepare(`SELECT * FROM markets WHERE id = ?`);
 
@@ -51,8 +51,6 @@ describe('DatabaseManager', () => {
 
     assert.ok(market, 'Inserted market should be retrieved');
     assert.equal(market.title, 'Test Market');
-    assert.equal(market.active, 1);
-    assert.equal(market.closed, 0);
     assert.equal(market.liquidity, 1000.5);
     assert.equal(market.volume, 5000.75);
   });
@@ -72,10 +70,10 @@ describe('DatabaseManager', () => {
     // Insert a parent market first
     db.prepare(
       `
-      INSERT INTO markets (id, title, active, closed, liquidity, volume)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO markets (id, title, liquidity, volume)
+      VALUES (?, ?, ?, ?)
     `
-    ).run(parentMarketId, 'Parent Market', 1, 0, 2000, 10000);
+    ).run(parentMarketId, 'Parent Market', 2000, 10000);
 
     const childMarketId = 'child1';
     const question = 'What is the outcome?';
@@ -83,8 +81,8 @@ describe('DatabaseManager', () => {
     const outcomePrices = JSON.stringify([1.5, 2.5]);
 
     const insertStmt = db.prepare(`
-      INSERT INTO child_markets (id, parent_market_id, question, outcomes, outcome_prices, volume, active, closed)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO child_markets (id, parent_market_id, question, outcomes, outcome_prices, volume)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
     insertStmt.run(
       childMarketId,
@@ -92,9 +90,7 @@ describe('DatabaseManager', () => {
       question,
       outcomes,
       outcomePrices,
-      300,
-      1,
-      0
+      300
     );
 
     const selectStmt = db.prepare(`SELECT * FROM child_markets WHERE id = ?`);
@@ -108,8 +104,6 @@ describe('DatabaseManager', () => {
     assert.equal(childMarket.outcomes, outcomes);
     assert.equal(childMarket.outcome_prices, outcomePrices);
     assert.equal(childMarket.volume, 300);
-    assert.equal(childMarket.active, 1);
-    assert.equal(childMarket.closed, 0);
 
     // Optionally, parse JSON fields
     const parsedOutcomes = JSON.parse(childMarket.outcomes);
