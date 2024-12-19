@@ -1,6 +1,6 @@
 import { DatabaseManager } from '../db/db.js';
 import { logger } from '../logger.js';
-import { prepareTyped, TypedStatement } from '../db/types.js';
+import { prepareTyped, TypedStatement, InsertResult } from '../db/types.js';
 import type { Database } from 'better-sqlite3';
 import { z } from 'zod';
 import { ParentMarket, MarketRow, MarketRowSchema } from './markets-schemas.js';
@@ -34,9 +34,6 @@ interface ValidationResult<T> {
     errors: z.ZodError;
   }>;
 }
-
-// Result types for insert operations
-type InsertResult = { lastInsertRowid: number } | { changes: number };
 
 export class MarketRepository {
   private readonly db: Database;

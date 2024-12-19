@@ -43,3 +43,5 @@ export function prepareTyped<
 ): TypedStatement<TParams, TResult> {
   return new TypedStatement(db.prepare(sql), schema);
 }
+
+export type InsertResult = { lastInsertRowid: number } | { changes: number };
