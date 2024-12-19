@@ -185,4 +185,58 @@ describe('DatabaseManager', () => {
       fs.rmSync('nonexistent.db', { force: true });
     }
   });
+
+  it('should throw a DatabaseError when the database file path is invalid', () => {
+    const invalidDbPath = '/invalid/path';
+    assert.throws(
+      () => new DatabaseManager(`${invalidDbPath}/database.db`),
+      (error) =>
+        error instanceof DatabaseError &&
+        error.message.includes(`Failed to create directory at ${invalidDbPath}`)
+    );
+  });
+
+  it('should throw a DatabaseError when the database connection is unexpectedly closed', () => {
+    const dbManager = getDbManager();
+
+    // Simulate an unexpected database connection close
+    dbManager['db'].close();
+
+    assert.throws(
+      () => dbManager.getConnection(),
+      (error) =>
+        error instanceof DatabaseError &&
+        error.message.includes('Database connection is not open')
+    );
+  });
+
+  it('should throw a DatabaseError when performing operations after closing the connection', () => {
+    const dbManager = getDbManager();
+
+    dbManager.close();
+
+    assert.throws(
+      () => {
+        try {
+          dbManager.getConnection().prepare('SELECT 1').get();
+        } catch (err: unknown) {
+          if (
+            err instanceof TypeError &&
+            err.message === 'The database connection is not open'
+          ) {
+            throw DatabaseError.from(
+              err,
+              'Failed to get database connection: Database connection is not open'
+            );
+          }
+          throw err;
+        }
+      },
+      (error) =>
+        error instanceof DatabaseError &&
+        error.message.includes(
+          'Failed to get database connection: Database connection is not open'
+        )
+    );
+  });
 });

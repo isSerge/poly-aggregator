@@ -7,6 +7,10 @@ import { logger } from '../logger.js';
 import { config } from '../config.js';
 import { DatabaseError } from '../errors.js';
 
+interface NodeError extends Error {
+  code?: string;
+}
+
 export class DatabaseManager {
   private readonly db: DatabaseType;
   private readonly dbPath: string;
@@ -25,9 +29,19 @@ export class DatabaseManager {
   }
 
   private ensureDirectoryExists(): void {
-    if (!fs.existsSync(this.dbDir)) {
-      fs.mkdirSync(this.dbDir, { recursive: true });
-      logger.info(`Created directory: ${this.dbDir}`);
+    try {
+      if (!fs.existsSync(this.dbDir)) {
+        fs.mkdirSync(this.dbDir, { recursive: true });
+        logger.info(`Created directory: ${this.dbDir}`);
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && (err as NodeError).code === 'ENOENT') {
+        throw DatabaseError.from(
+          err,
+          `Failed to create directory at ${this.dbDir}`
+        );
+      }
+      throw err;
     }
   }
 
@@ -76,6 +90,12 @@ export class DatabaseManager {
   }
 
   public getConnection(): DatabaseType {
+    if (!this.db.open) {
+      throw DatabaseError.from(
+        new Error('Database connection is not open'),
+        'Failed to get database connection'
+      );
+    }
     return this.db;
   }
 
