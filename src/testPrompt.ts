@@ -27,7 +27,7 @@ async function testPrompt() {
 
     const previousMarkets = await marketRepository.getActiveMarkets();
     if (!previousMarkets?.length) {
-      throw new ValidationError('No previous markets found for comparison', []);
+      logger.warn('No previous market data available');
     }
 
     const latestReport = await reportRepository.getLatest();
