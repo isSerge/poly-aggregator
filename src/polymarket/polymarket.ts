@@ -25,8 +25,8 @@ export const toStreamlinedMarket = (
   const parentMarket: ParentMarket = {
     id: apiResponse.id,
     title: apiResponse.title,
-    startDate: apiResponse.startDate,
-    endDate: apiResponse.endDate,
+    startDate: apiResponse.startDate || '', // Some markets may not have a start date
+    endDate: apiResponse.endDate ?? null,
     liquidity: apiResponse.liquidity,
     volume: apiResponse.volume || 0,
     childMarkets,

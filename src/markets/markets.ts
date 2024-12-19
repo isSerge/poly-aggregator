@@ -1,23 +1,79 @@
+import { DatabaseManager } from '../db/db.js';
 import { logger } from '../logger.js';
-import { ParentMarket, MarketRow, MarketRowSchema } from './markets-schemas.js';
-import { DatabaseType, DatabaseManager } from '../db/db.js';
+import { prepareTyped, TypedStatement } from '../db/types.js';
+import type { Database } from 'better-sqlite3';
 import { z } from 'zod';
+import { ParentMarket, MarketRow, MarketRowSchema } from './markets-schemas.js';
 
+// Types that match the actual database structure
+interface DbMarket {
+  id: string;
+  title: string;
+  start_date: string;
+  end_date: string | null;
+  liquidity: number;
+  volume: number;
+  [key: string]: string | number | boolean | null;
+}
+
+interface DbChildMarket {
+  id: string;
+  parent_market_id: string;
+  question: string;
+  outcomes: string;
+  outcome_prices: string;
+  volume: number;
+  [key: string]: string | number | boolean | null;
+}
+
+// For handling validation results
 interface ValidationResult<T> {
   validRows: T[];
-  invalidRows: InvalidRow[];
+  invalidRows: Array<{
+    row: unknown;
+    errors: z.ZodError;
+  }>;
 }
 
-interface InvalidRow {
-  row: unknown;
-  errors: z.ZodIssue[];
-}
+// Result types for insert operations
+type InsertResult = { lastInsertRowid: number } | { changes: number };
 
 export class MarketRepository {
-  private readonly db: DatabaseType;
+  private readonly db: Database;
+  private readonly insertMarket: TypedStatement<DbMarket, InsertResult>;
+  private readonly insertChildMarket: TypedStatement<
+    DbChildMarket,
+    InsertResult
+  >;
 
-  public constructor(databaseManager: DatabaseManager) {
-    this.db = databaseManager.getConnection();
+  constructor(dbManager: DatabaseManager) {
+    this.db = dbManager.getConnection();
+
+    this.insertMarket = prepareTyped(
+      this.db,
+      `INSERT OR REPLACE INTO markets (
+        id, title, start_date, end_date, liquidity, volume
+      ) VALUES (
+        @id, @title, @start_date, @end_date, @liquidity, @volume
+      )`,
+      z.object({
+        lastInsertRowid: z.number(),
+        changes: z.number(),
+      })
+    );
+
+    this.insertChildMarket = prepareTyped(
+      this.db,
+      `INSERT OR REPLACE INTO child_markets (
+        id, parent_market_id, question, outcomes, outcome_prices, volume
+      ) VALUES (
+        @id, @parent_market_id, @question, @outcomes, @outcome_prices, @volume
+      )`,
+      z.object({
+        lastInsertRowid: z.number(),
+        changes: z.number(),
+      })
+    );
   }
 
   private createDeleteStatementForIds(ids: string[]) {
@@ -26,73 +82,52 @@ export class MarketRepository {
       return this.db.prepare(
         `DELETE FROM markets WHERE id NOT IN (${placeholders})`
       );
-    } else {
-      return this.db.prepare(`DELETE FROM markets`);
     }
+    return this.db.prepare('DELETE FROM markets');
   }
 
-  public saveMarkets(currentMarkets: ParentMarket[]) {
-    const insertMarket = this.db.prepare(`
-      INSERT OR REPLACE INTO markets (id, title, start_date, end_date, liquidity, volume)
-      VALUES (@id, @title, @start_date, @end_date, @liquidity, @volume)
-    `);
-
-    const insertChildMarket = this.db.prepare(`
-      INSERT OR REPLACE INTO child_markets (id, parent_market_id, question, outcomes, outcome_prices, volume)
-      VALUES (@id, @parent_market_id, @question, @outcomes, @outcome_prices, @volume)
-    `);
-
-    // Extract current market IDs
+  public saveMarkets(currentMarkets: ParentMarket[]): void {
     const currentMarketIds = currentMarkets.map((market) => market.id);
-
-    // Prepare the delete statement to remove closed markets
     const deleteClosedMarkets =
       this.createDeleteStatementForIds(currentMarketIds);
 
     const transaction = this.db.transaction((markets: ParentMarket[]) => {
       for (const market of markets) {
-        insertMarket.run({
+        const dbMarket: DbMarket = {
           id: market.id,
           title: market.title,
           start_date: market.startDate,
-          end_date: market.endDate,
+          end_date: market.endDate ?? null,
           liquidity: market.liquidity,
           volume: market.volume,
-        });
-        logger.info(`Inserted/Updated market with ID: ${market.id}`);
+        };
+        this.insertMarket.run(dbMarket);
 
-        for (const childMarket of market.childMarkets || []) {
-          insertChildMarket.run({
+        for (const childMarket of market.childMarkets) {
+          const dbChildMarket: DbChildMarket = {
             id: childMarket.id,
             parent_market_id: childMarket.parent_market_id,
             question: childMarket.question,
             outcomes: JSON.stringify(childMarket.outcomes),
             outcome_prices: JSON.stringify(childMarket.outcomePrices),
             volume: childMarket.volume,
-          });
-          logger.info(
-            `Inserted/Updated child market with ID: ${childMarket.id}`
-          );
+          };
+          this.insertChildMarket.run(dbChildMarket);
         }
       }
 
-      // Delete closed markets after all insertions/updates
       if (currentMarketIds.length > 0) {
         deleteClosedMarkets.run(...currentMarketIds);
-        logger.info(`Deleted closed markets: ${currentMarketIds.join(', ')}`);
       } else {
         deleteClosedMarkets.run();
-        logger.info('Deleted all markets');
       }
     });
 
     try {
       transaction(currentMarkets);
-      logger.info(
-        'Successfully saved current markets and removed closed markets'
-      );
+      logger.info('Successfully saved markets and removed closed markets');
     } catch (error) {
-      logger.error('Transaction failed and was rolled back');
+      logger.error(error, 'Failed to save markets');
       throw error;
     }
   }
@@ -101,31 +136,33 @@ export class MarketRepository {
     const rows = this.db
       .prepare(
         `
-      SELECT 
-        markets.id AS market_id,
-        markets.title,
-        markets.start_date,
-        markets.end_date,
-        markets.liquidity,
-        markets.volume,
-        child_markets.id AS child_id,
-        child_markets.question,
-        child_markets.outcomes,
-        child_markets.outcome_prices,
-        child_markets.volume AS child_volume
-      FROM markets
-      LEFT JOIN child_markets ON markets.id = child_markets.parent_market_id
-    `
+    SELECT 
+      markets.id AS market_id,
+      markets.title,
+      markets.start_date,
+      markets.end_date,
+      markets.liquidity,
+      markets.volume,
+      child_markets.id AS child_id,
+      child_markets.question,
+      child_markets.outcomes,
+      child_markets.outcome_prices,
+      child_markets.volume AS child_volume,
+      markets.created_at,
+      markets.updated_at
+    FROM markets
+    LEFT JOIN child_markets ON markets.id = child_markets.parent_market_id
+  `
       )
       .all();
 
-    const { validRows, invalidRows } = rows.reduce(
+    const { validRows, invalidRows } = rows.reduce<ValidationResult<MarketRow>>(
       (acc: ValidationResult<MarketRow>, row: unknown) => {
         const result = MarketRowSchema.safeParse(row);
         if (result.success) {
           acc.validRows.push(result.data);
         } else {
-          acc.invalidRows.push({ row, errors: result.error.errors });
+          acc.invalidRows.push({ row, errors: result.error });
         }
         return acc;
       },
@@ -133,41 +170,48 @@ export class MarketRepository {
     );
 
     if (invalidRows.length > 0) {
-      logger.warn(
-        invalidRows,
-        'Some rows failed validation in getPreviousMarketData:'
-      );
+      for (const { row, errors } of invalidRows) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const marketId = (row as any).market_id || 'Unknown ID';
+        logger.warn(
+          `Row validation failed for market_id ${marketId}:`,
+          errors.errors
+        );
+      }
     }
 
-    const markets = validRows.reduce(
-      (acc: Record<string, ParentMarket>, row: MarketRow) => {
-        const parent = acc[row.market_id] || {
+    return this.transformToParentMarkets(validRows);
+  }
+
+  private transformToParentMarkets(rows: MarketRow[]): ParentMarket[] {
+    const marketMap = new Map<string, ParentMarket>();
+
+    for (const row of rows) {
+      if (!marketMap.has(row.market_id)) {
+        marketMap.set(row.market_id, {
           id: row.market_id,
           title: row.title,
           startDate: row.start_date,
           endDate: row.end_date,
-          liquidity: row.liquidity || 0,
-          volume: row.volume || 0,
+          liquidity: row.liquidity,
+          volume: row.volume,
           childMarkets: [],
-        };
+        });
+      }
 
-        if (row.child_id) {
-          parent.childMarkets.push({
-            id: row.child_id,
-            parent_market_id: row.market_id,
-            question: row.question || '',
-            outcomes: JSON.parse(row.outcomes || '[]'),
-            outcomePrices: JSON.parse(row.outcome_prices || '[]'),
-            volume: row.child_volume || 0,
-          });
-        }
+      if (row.child_id) {
+        const parent = marketMap.get(row.market_id)!;
+        parent.childMarkets.push({
+          id: row.child_id,
+          parent_market_id: row.market_id,
+          question: row.question || '',
+          outcomes: JSON.parse(row.outcomes || '[]'),
+          outcomePrices: JSON.parse(row.outcome_prices || '[]'),
+          volume: row.child_volume || 0,
+        });
+      }
+    }
 
-        acc[row.market_id] = parent;
-        return acc;
-      },
-      {}
-    );
-
-    return Object.values(markets);
+    return Array.from(marketMap.values());
   }
 }
