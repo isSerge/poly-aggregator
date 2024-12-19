@@ -38,11 +38,11 @@ describe('DatabaseManager', () => {
     const db = dbManager.getConnection();
 
     const insertStmt = db.prepare(`
-      INSERT INTO markets (id, title, liquidity, volume)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO markets (id, title, start_date, liquidity, volume)
+      VALUES (?, ?, ?, ?, ?)
     `);
     const marketId = 'market1';
-    insertStmt.run(marketId, 'Test Market', 1000.5, 5000.75);
+    insertStmt.run(marketId, 'Test Market', '2023-01-01', 1000.5, 5000.75);
 
     const selectStmt = db.prepare(`SELECT * FROM markets WHERE id = ?`);
 
@@ -51,6 +51,7 @@ describe('DatabaseManager', () => {
 
     assert.ok(market, 'Inserted market should be retrieved');
     assert.equal(market.title, 'Test Market');
+    assert.equal(market.start_date, '2023-01-01');
     assert.equal(market.liquidity, 1000.5);
     assert.equal(market.volume, 5000.75);
   });
@@ -67,13 +68,19 @@ describe('DatabaseManager', () => {
     const db = dbManager.getConnection();
 
     const parentMarketId = 'market1';
-    // Insert a parent market first
+    // Insert a parent market first with required fields
     db.prepare(
       `
-      INSERT INTO markets (id, title, liquidity, volume)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO markets (id, title, start_date, liquidity, volume)
+      VALUES (?, ?, ?, ?, ?)
     `
-    ).run(parentMarketId, 'Parent Market', 2000, 10000);
+    ).run(
+      parentMarketId,
+      'Parent Market',
+      '2023-01-01', // Added required start_date
+      2000,
+      10000
+    );
 
     const childMarketId = 'child1';
     const question = 'What is the outcome?';
