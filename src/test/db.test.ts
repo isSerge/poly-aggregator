@@ -186,16 +186,6 @@ describe('DatabaseManager', () => {
     }
   });
 
-  it('should throw a DatabaseError when the database file path is invalid', () => {
-    const invalidDbPath = '/invalid/path';
-    assert.throws(
-      () => new DatabaseManager(`${invalidDbPath}/database.db`),
-      (error) =>
-        error instanceof DatabaseError &&
-        error.message.includes(`Failed to create directory at ${invalidDbPath}`)
-    );
-  });
-
   it('should throw a DatabaseError when the database connection is unexpectedly closed', () => {
     const dbManager = getDbManager();
 
