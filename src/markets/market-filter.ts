@@ -107,7 +107,13 @@ export class MarketFilter {
     const mean = (arr: number[]) => sum(arr) / arr.length;
     const median = (arr: number[]) => {
       const sorted = [...arr].sort((a, b) => a - b);
-      return sorted[Math.floor(sorted.length / 2)];
+      const mid = Math.floor(sorted.length / 2);
+      // If even length, take average of two middle values
+      if (sorted.length % 2 === 0) {
+        return (sorted[mid - 1] + sorted[mid]) / 2;
+      }
+      // If odd length, take middle value
+      return sorted[mid];
     };
     const max = (arr: number[]) => Math.max(...arr);
 
