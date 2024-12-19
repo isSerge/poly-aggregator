@@ -1,11 +1,11 @@
 import { setupTest } from './utils/test-utils.js';
-
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import { DatabaseManager } from '../db/db.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { DatabaseError } from '../errors.js';
 
 // Define __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -163,7 +163,7 @@ describe('DatabaseManager', () => {
   });
 
   it('should handle schema initialization errors gracefully', () => {
-    // Backup the original readFileSync and logger.error methods
+    // Backup the original readFileSync method
     const originalReadFileSync = fs.readFileSync;
 
     // Mock readFileSync to throw an error
@@ -172,17 +172,14 @@ describe('DatabaseManager', () => {
     };
 
     try {
-      // Attempt to create DatabaseManager, expecting it to throw
       assert.throws(
         () => new DatabaseManager('nonexistent.db'),
-        {
-          name: 'Error',
-          message: 'Simulated readFile error',
-        },
-        'DatabaseManager constructor should throw the simulated readFile error'
+        (error: unknown) =>
+          error instanceof DatabaseError &&
+          error.message.includes('Simulated readFile error')
       );
     } finally {
-      // Restore the original readFileSync and logger.error methods
+      // Restore the original readFileSync method
       fs.readFileSync = originalReadFileSync;
       // remove non-existent db file
       fs.rmSync('nonexistent.db', { force: true });

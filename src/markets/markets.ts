@@ -4,6 +4,7 @@ import { prepareTyped, TypedStatement, InsertResult } from '../db/types.js';
 import type { Database } from 'better-sqlite3';
 import { z } from 'zod';
 import { ParentMarket, MarketRow, MarketRowSchema } from './markets-schemas.js';
+import { DatabaseError, ValidationError } from '../errors.js';
 
 // Types that match the actual database structure
 interface DbMarket {
@@ -90,33 +91,44 @@ export class MarketRepository {
 
     const transaction = this.db.transaction((markets: ParentMarket[]) => {
       for (const market of markets) {
-        const dbMarket: DbMarket = {
-          id: market.id,
-          title: market.title,
-          start_date: market.startDate,
-          end_date: market.endDate ?? null,
-          liquidity: market.liquidity,
-          volume: market.volume,
-        };
-        this.insertMarket.run(dbMarket);
-
-        for (const childMarket of market.childMarkets) {
-          const dbChildMarket: DbChildMarket = {
-            id: childMarket.id,
-            parent_market_id: childMarket.parent_market_id,
-            question: childMarket.question,
-            outcomes: JSON.stringify(childMarket.outcomes),
-            outcome_prices: JSON.stringify(childMarket.outcomePrices),
-            volume: childMarket.volume,
+        try {
+          const dbMarket: DbMarket = {
+            id: market.id,
+            title: market.title,
+            start_date: market.startDate,
+            end_date: market.endDate ?? null,
+            liquidity: market.liquidity,
+            volume: market.volume,
           };
-          this.insertChildMarket.run(dbChildMarket);
+          this.insertMarket.run(dbMarket);
+
+          for (const childMarket of market.childMarkets) {
+            const dbChildMarket: DbChildMarket = {
+              id: childMarket.id,
+              parent_market_id: childMarket.parent_market_id,
+              question: childMarket.question,
+              outcomes: JSON.stringify(childMarket.outcomes),
+              outcome_prices: JSON.stringify(childMarket.outcomePrices),
+              volume: childMarket.volume,
+            };
+            this.insertChildMarket.run(dbChildMarket);
+          }
+        } catch (error) {
+          throw DatabaseError.from(
+            error,
+            `Failed to save market ${market.id} with its child markets`
+          );
         }
       }
 
-      if (currentMarketIds.length > 0) {
-        deleteClosedMarkets.run(...currentMarketIds);
-      } else {
-        deleteClosedMarkets.run();
+      try {
+        if (currentMarketIds.length > 0) {
+          deleteClosedMarkets.run(...currentMarketIds);
+        } else {
+          deleteClosedMarkets.run();
+        }
+      } catch (error) {
+        throw DatabaseError.from(error, 'Failed to delete closed markets');
       }
     });
 
@@ -124,60 +136,69 @@ export class MarketRepository {
       transaction(currentMarkets);
       logger.info('Successfully saved markets and removed closed markets');
     } catch (error) {
-      logger.error(error, 'Failed to save markets');
-      throw error;
+      const dbError =
+        error instanceof DatabaseError
+          ? error
+          : DatabaseError.from(error, 'Failed to save markets');
+      logger.error(dbError, 'Transaction failed and was rolled back:');
+      throw dbError;
     }
   }
 
   public getActiveMarkets(): ParentMarket[] {
-    const rows = this.db
-      .prepare(
-        `
-    SELECT 
-      markets.id AS market_id,
-      markets.title,
-      markets.start_date,
-      markets.end_date,
-      markets.liquidity,
-      markets.volume,
-      child_markets.id AS child_id,
-      child_markets.question,
-      child_markets.outcomes,
-      child_markets.outcome_prices,
-      child_markets.volume AS child_volume,
-      markets.created_at,
-      markets.updated_at
-    FROM markets
-    LEFT JOIN child_markets ON markets.id = child_markets.parent_market_id
-  `
-      )
-      .all();
+    try {
+      const rows = this.db
+        .prepare(
+          `
+      SELECT 
+        markets.id AS market_id,
+        markets.title,
+        markets.start_date,
+        markets.end_date,
+        markets.liquidity,
+        markets.volume,
+        child_markets.id AS child_id,
+        child_markets.question,
+        child_markets.outcomes,
+        child_markets.outcome_prices,
+        child_markets.volume AS child_volume,
+        markets.created_at,
+        markets.updated_at
+      FROM markets
+      LEFT JOIN child_markets ON markets.id = child_markets.parent_market_id
+    `
+        )
+        .all();
 
-    const { validRows, invalidRows } = rows.reduce<ValidationResult<MarketRow>>(
-      (acc: ValidationResult<MarketRow>, row: unknown) => {
-        const result = MarketRowSchema.safeParse(row);
-        if (result.success) {
-          acc.validRows.push(result.data);
-        } else {
-          acc.invalidRows.push({ row, errors: result.error });
-        }
-        return acc;
-      },
-      { validRows: [], invalidRows: [] }
-    );
+      const { validRows, invalidRows } = rows.reduce<
+        ValidationResult<MarketRow>
+      >(
+        (acc: ValidationResult<MarketRow>, row: unknown) => {
+          const result = MarketRowSchema.safeParse(row);
+          if (result.success) {
+            acc.validRows.push(result.data);
+          } else {
+            acc.invalidRows.push({ row, errors: result.error });
+          }
+          return acc;
+        },
+        { validRows: [], invalidRows: [] }
+      );
 
-    if (invalidRows.length > 0) {
-      for (const { row, errors } of invalidRows) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const marketId = (row as any).market_id || 'Unknown ID';
-        logger.warn(
-          `Row validation failed for market_id ${marketId}:`,
-          errors.errors
+      if (invalidRows.length > 0) {
+        throw new ValidationError(
+          'Some market rows failed validation',
+          invalidRows
         );
       }
-    }
 
-    return this.transformToParentMarkets(validRows);
+      return this.transformToParentMarkets(validRows);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      throw DatabaseError.from(error, 'Failed to get active markets');
+    }
   }
 
   private transformToParentMarkets(rows: MarketRow[]): ParentMarket[] {

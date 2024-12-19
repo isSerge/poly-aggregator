@@ -1,5 +1,5 @@
 import { logger } from './logger.js';
-import { handleError } from './utils.js';
+import { DatabaseError, ValidationError, NetworkError } from './errors.js';
 import { DatabaseManager } from './db/db.js';
 import { fetchCryptoMarkets } from './polymarket/polymarket.js';
 import { MarketRepository } from './markets/markets.js';
@@ -12,8 +12,7 @@ export async function main() {
 
   try {
     if (!dbManager.isHealthy()) {
-      logger.warn('Database connection failed. Exiting.');
-      return;
+      throw new DatabaseError('Database connection is not healthy');
     }
 
     const marketRepository = new MarketRepository(dbManager);
@@ -27,7 +26,7 @@ export async function main() {
 
     const previousMarketsData = await marketRepository.getActiveMarkets();
 
-    marketRepository.saveMarkets(currentMarkets);
+    await marketRepository.saveMarkets(currentMarkets);
 
     if (!previousMarketsData.length) {
       logger.info(
@@ -37,11 +36,10 @@ export async function main() {
     }
 
     logger.info(
-      `Fetched market data: current markets: ${currentMarkets.length}, previous markets: ${previousMarketsData.length}`
+      `Market data processed: current markets: ${currentMarkets.length}, previous markets: ${previousMarketsData.length}`
     );
 
     const latestReport = await reportRepository.getLatest();
-
     const prompt = formatPrompt(
       currentMarkets,
       previousMarketsData,
@@ -49,13 +47,23 @@ export async function main() {
     );
 
     const analysis = await analyzePredictionMarkets(prompt);
-
     if (analysis?.content) {
-      reportRepository.save(analysis.content.toString());
-      logger.info(analysis.content, 'Analysis completed:');
+      await reportRepository.save(analysis.content.toString());
+      logger.info(analysis.content, 'Analysis completed and saved');
     }
   } catch (error) {
-    handleError(error, 'Application error');
+    let logMessage = 'Application error';
+
+    if (error instanceof DatabaseError) {
+      logMessage = `Database error: ${error.message}${error.code ? ` (Code: ${error.code})` : ''}`;
+    } else if (error instanceof NetworkError) {
+      logMessage = `Network error: ${error.message}${error.statusCode ? ` (Status: ${error.statusCode})` : ''}`;
+    } else if (error instanceof ValidationError) {
+      logMessage = `Validation error: ${error.message}`;
+    }
+
+    logger.error(error, logMessage);
+    throw error;
   } finally {
     dbManager.close();
   }

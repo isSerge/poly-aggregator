@@ -1,6 +1,6 @@
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { config } from '../config.js';
-import { logger } from '../logger.js';
+import { NetworkError } from '../errors.js';
 
 const llm = new ChatGoogleGenerativeAI({
   model: 'gemini-1.5-flash',
@@ -12,7 +12,6 @@ export async function analyzePredictionMarkets(prompt: string) {
   try {
     return await llm.invoke(prompt);
   } catch (error) {
-    logger.error(`LLM Invocation Error: ${error}`);
-    throw error;
+    throw NetworkError.from(error, 'LLM API request failed');
   }
 }

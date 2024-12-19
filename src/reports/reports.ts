@@ -1,9 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
+import { z } from 'zod';
+import type { Database } from 'better-sqlite3';
 import { logger } from '../logger.js';
 import { DatabaseManager } from '../db/db.js';
 import { InsertResult, prepareTyped, TypedStatement } from '../db/types.js';
-import type { Database } from 'better-sqlite3';
-import { z } from 'zod';
+import { DatabaseError, ValidationError } from '../errors.js';
 
 // SQLite row types
 export interface SqliteReport {
@@ -32,6 +33,10 @@ export class ReportRepository {
   }
 
   save(content: string): void {
+    if (!content.trim()) {
+      throw new ValidationError('Report content cannot be empty', []);
+    }
+
     try {
       const report: SqliteReport = {
         id: uuidv4(),
@@ -42,8 +47,9 @@ export class ReportRepository {
       this.insertReport.run(report);
       logger.info('Report saved successfully');
     } catch (error) {
-      logger.error('Failed to save report:', error);
-      throw error;
+      const dbError = DatabaseError.from(error, 'Failed to save report');
+      logger.error(dbError, 'Failed to save report:');
+      throw dbError;
     }
   }
 
@@ -62,8 +68,9 @@ export class ReportRepository {
 
       return rows[0]?.content ?? null;
     } catch (error) {
-      logger.error('Failed to get latest report:', error);
-      throw error;
+      const dbError = DatabaseError.from(error, 'Failed to get latest report');
+      logger.error(dbError, 'Failed to get latest report:');
+      throw dbError;
     }
   }
 }
