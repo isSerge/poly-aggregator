@@ -2,7 +2,11 @@ import { setupTest } from './utils/test-utils.js';
 import { describe, it, beforeEach } from 'node:test';
 import * as assert from 'node:assert/strict';
 import { MarketRepository } from '../markets/markets.js';
-import { ParentMarket } from '../markets/markets-schemas.js';
+import {
+  ParentMarket,
+  SqliteMarket,
+  SqliteChildMarket,
+} from '../markets/markets-schemas.js';
 
 describe('MarketRepository', () => {
   const { getDbManager } = setupTest();
@@ -36,8 +40,7 @@ describe('MarketRepository', () => {
 
     const savedMarket = db
       .prepare('SELECT * FROM markets WHERE id = ?')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .get('market1') as any;
+      .get('market1') as SqliteMarket;
 
     assert.ok(savedMarket, 'Inserted market should be retrieved');
     assert.equal(savedMarket.title, 'Market 1');
@@ -87,18 +90,15 @@ describe('MarketRepository', () => {
 
     const savedMarket = db
       .prepare('SELECT * FROM markets WHERE id = ?')
-      //   eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .get('market2') as any;
+      .get('market2') as SqliteMarket;
 
     const savedChild1 = db
       .prepare('SELECT * FROM child_markets WHERE id = ?')
-      //   eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .get('child1') as any;
+      .get('child1') as SqliteChildMarket;
 
     const savedChild2 = db
       .prepare('SELECT * FROM child_markets WHERE id = ?')
-      //   eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .get('child2') as any;
+      .get('child2') as SqliteChildMarket;
 
     assert.ok(savedMarket, 'Inserted market should be retrieved');
     assert.equal(savedMarket.title, 'Market 2');
@@ -203,8 +203,7 @@ describe('MarketRepository', () => {
 
     const savedMarket = db
       .prepare('SELECT * FROM markets WHERE id = ?')
-      //   eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .get('market4') as any;
+      .get('market4') as SqliteMarket;
 
     assert.ok(savedMarket, 'Inserted market should be retrieved');
     assert.equal(savedMarket.title, 'Market 4 Updated');
@@ -403,8 +402,7 @@ describe('MarketRepository', () => {
 
     const savedMarket = db
       .prepare('SELECT * FROM markets WHERE id = ?')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .get('market10') as any;
+      .get('market10') as SqliteMarket;
 
     assert.ok(savedMarket, 'Inserted market should be retrieved');
   });
@@ -476,8 +474,7 @@ describe('MarketRepository', () => {
 
     const closedMarket = marketRepository['db']
       .prepare(`SELECT * FROM markets WHERE id = ?`)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .get('market2') as any;
+      .get('market2') as SqliteMarket;
 
     assert.equal(
       closedMarket,
@@ -538,13 +535,11 @@ describe('MarketRepository', () => {
 
     const market1 = marketRepository['db']
       .prepare(`SELECT * FROM markets WHERE id = ?`)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .get('market1') as any;
+      .get('market1') as SqliteMarket;
 
     const market2 = marketRepository['db']
       .prepare(`SELECT * FROM markets WHERE id = ?`)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .get('market2') as any;
+      .get('market2') as SqliteMarket;
 
     assert.equal(
       market1,
@@ -614,8 +609,7 @@ describe('MarketRepository', () => {
     // Verify that the child market is deleted from the database
     const closedChildMarket = marketRepository['db']
       .prepare(`SELECT * FROM child_markets WHERE id = ?`)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .get('child1') as any;
+      .get('child1') as SqliteChildMarket;
 
     assert.equal(
       closedChildMarket,
