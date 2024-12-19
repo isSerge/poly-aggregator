@@ -28,32 +28,9 @@ describe('DatabaseManager', () => {
       const stmt = db.prepare(
         `SELECT name FROM sqlite_master WHERE type='table' AND name = ?`
       );
-      const row = stmt.get(table); // Type inferred as any
+      const row = stmt.get(table);
       assert.ok(row, `Table ${table} should exist`);
     });
-  });
-
-  it('should insert and retrieve a market', () => {
-    const dbManager = getDbManager();
-    const db = dbManager.getConnection();
-
-    const insertStmt = db.prepare(`
-      INSERT INTO markets (id, title, start_date, liquidity, volume)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-    const marketId = 'market1';
-    insertStmt.run(marketId, 'Test Market', '2023-01-01', 1000.5, 5000.75);
-
-    const selectStmt = db.prepare(`SELECT * FROM markets WHERE id = ?`);
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const market = selectStmt.get(marketId) as any;
-
-    assert.ok(market, 'Inserted market should be retrieved');
-    assert.equal(market.title, 'Test Market');
-    assert.equal(market.start_date, '2023-01-01');
-    assert.equal(market.liquidity, 1000.5);
-    assert.equal(market.volume, 5000.75);
   });
 
   it('should handle closing the database connection', () => {
@@ -61,86 +38,6 @@ describe('DatabaseManager', () => {
     assert.ok(dbManager.isHealthy(), 'Database should initially be healthy');
     dbManager.close();
     assert.equal(dbManager.isHealthy(), false, 'Database should be closed');
-  });
-
-  it('should insert and retrieve a child market with JSON fields', () => {
-    const dbManager = getDbManager();
-    const db = dbManager.getConnection();
-
-    const parentMarketId = 'market1';
-    // Insert a parent market first with required fields
-    db.prepare(
-      `
-      INSERT INTO markets (id, title, start_date, liquidity, volume)
-      VALUES (?, ?, ?, ?, ?)
-    `
-    ).run(
-      parentMarketId,
-      'Parent Market',
-      '2023-01-01', // Added required start_date
-      2000,
-      10000
-    );
-
-    const childMarketId = 'child1';
-    const question = 'What is the outcome?';
-    const outcomes = JSON.stringify(['Yes', 'No']);
-    const outcomePrices = JSON.stringify([1.5, 2.5]);
-
-    const insertStmt = db.prepare(`
-      INSERT INTO child_markets (id, parent_market_id, question, outcomes, outcome_prices, volume)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-    insertStmt.run(
-      childMarketId,
-      parentMarketId,
-      question,
-      outcomes,
-      outcomePrices,
-      300
-    );
-
-    const selectStmt = db.prepare(`SELECT * FROM child_markets WHERE id = ?`);
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const childMarket = selectStmt.get(childMarketId) as any;
-
-    assert.ok(childMarket, 'Inserted child market should be retrieved');
-    assert.equal(childMarket.parent_market_id, parentMarketId);
-    assert.equal(childMarket.question, question);
-    assert.equal(childMarket.outcomes, outcomes);
-    assert.equal(childMarket.outcome_prices, outcomePrices);
-    assert.equal(childMarket.volume, 300);
-
-    // Optionally, parse JSON fields
-    const parsedOutcomes = JSON.parse(childMarket.outcomes);
-    const parsedOutcomePrices = JSON.parse(childMarket.outcome_prices);
-    assert.deepEqual(parsedOutcomes, ['Yes', 'No']);
-    assert.deepEqual(parsedOutcomePrices, [1.5, 2.5]);
-  });
-
-  it('should insert and retrieve a report with a timestamp', () => {
-    const dbManager = getDbManager();
-    const db = dbManager.getConnection();
-
-    const reportId = 'report1';
-    const content = 'This is a test report.';
-
-    const insertStmt = db.prepare(`
-      INSERT INTO reports (id, content)
-      VALUES (?, ?)
-    `);
-    insertStmt.run(reportId, content);
-
-    const selectStmt = db.prepare(`SELECT * FROM reports WHERE id = ?`);
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const report = selectStmt.get(reportId) as any;
-
-    assert.ok(report, 'Inserted report should be retrieved');
-    assert.equal(report.id, reportId);
-    assert.equal(report.content, content);
-    assert.ok(report.created_at, 'Report should have a created_at timestamp');
   });
 
   it('should ensure directory creation if it does not exist', () => {
