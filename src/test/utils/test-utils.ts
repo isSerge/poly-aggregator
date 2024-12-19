@@ -7,12 +7,14 @@ export function setupTest() {
 
   beforeEach(() => {
     logger.info('Setting up test environment');
+    logger.level = 'silent'; // Disable logging
     process.env.NODE_ENV = 'test';
     dbManager = new DatabaseManager(':memory:'); // Use in-memory DB
   });
 
   afterEach(() => {
     logger.info('Cleaning up test environment');
+    logger.level = 'info'; // Re-enable logging
     dbManager?.close();
     // No need to delete in-memory DB
   });
