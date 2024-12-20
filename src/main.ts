@@ -28,10 +28,14 @@ export async function main() {
     }
 
     // 2. Get previous markets BEFORE saving current ones
-    const previousMarketsData = await marketRepository.getActiveMarkets();
+    const previousMarkets = await marketRepository.getActiveMarkets();
+
+    if (!previousMarkets?.length) {
+      logger.warn('No previous market data available');
+    }
 
     logger.info(
-      `Market data fetched: current markets: ${currentMarkets.length}, previous markets: ${previousMarketsData.length}`
+      `Market data fetched: current markets: ${currentMarkets.length}, previous markets: ${previousMarkets.length}`
     );
 
     // 3. Filter both sets for LLM analysis
@@ -43,7 +47,7 @@ export async function main() {
       });
 
     const { markets: filteredPreviousMarkets, stats: previousStats } =
-      marketFilter.filterMarkets(previousMarketsData, {
+      marketFilter.filterMarkets(previousMarkets, {
         timeWeight: true,
         targetCount: 15,
         minScore: 0.1,
@@ -59,7 +63,7 @@ export async function main() {
           meanLiquidity: currentStats.meanLiquidity,
         },
         previous: {
-          total: previousMarketsData.length,
+          total: previousMarkets.length,
           filtered: filteredPreviousMarkets.length,
           meanVolume: previousStats.meanVolume,
           meanLiquidity: previousStats.meanLiquidity,
