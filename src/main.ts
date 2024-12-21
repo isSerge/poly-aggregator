@@ -39,34 +39,35 @@ export async function main() {
     );
 
     // 3. Filter both sets for LLM analysis
-    const { markets: filteredCurrentMarkets, stats: currentStats } =
-      marketFilter.filterMarkets(currentMarkets, {
-        timeWeight: true,
-        targetCount: 15,
-        minScore: 0.1,
-      });
+    const filteredCurrentMarkets = marketFilter.filterMarkets(currentMarkets, {
+      timeWeight: true,
+      targetCount: 15,
+      minScore: 0.1,
+    });
 
-    const { markets: filteredPreviousMarkets, stats: previousStats } =
-      marketFilter.filterMarkets(previousMarkets, {
+    const filteredPreviousMarkets = marketFilter.filterMarkets(
+      previousMarkets,
+      {
         timeWeight: true,
         targetCount: 15,
         minScore: 0.1,
-      });
+      }
+    );
 
     // Log filtering statistics
     logger.info(
       {
         current: {
           total: currentMarkets.length,
-          filtered: filteredCurrentMarkets.length,
-          meanVolume: currentStats.meanVolume,
-          meanLiquidity: currentStats.meanLiquidity,
+          filtered: filteredCurrentMarkets.markets.length,
+          meanVolume: filteredCurrentMarkets.stats.meanVolume,
+          meanLiquidity: filteredCurrentMarkets.stats.meanLiquidity,
         },
         previous: {
           total: previousMarkets.length,
-          filtered: filteredPreviousMarkets.length,
-          meanVolume: previousStats.meanVolume,
-          meanLiquidity: previousStats.meanLiquidity,
+          filtered: filteredPreviousMarkets.markets.length,
+          meanVolume: filteredPreviousMarkets.stats.meanVolume,
+          meanLiquidity: filteredPreviousMarkets.stats.meanLiquidity,
         },
       },
       'Market filtering results:'
