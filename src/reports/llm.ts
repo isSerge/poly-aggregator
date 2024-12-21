@@ -3,7 +3,7 @@ import { config } from '../config.js';
 import { NetworkError } from '../errors.js';
 
 const llm = new ChatGoogleGenerativeAI({
-  model: 'gemini-1.5-flash',
+  model: 'gemini-1.5-pro',
   temperature: 0.7,
   apiKey: config.GEMINI_API_KEY,
 });
