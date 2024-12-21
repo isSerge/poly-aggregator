@@ -13,6 +13,13 @@ interface MarketStats {
 }
 
 /**
+ * Market category stats for asset-specific normalization
+ */
+interface CategoryStats {
+  [category: string]: MarketStats;
+}
+
+/**
  * Options for market filtering.
  */
 interface FilterOptions {
@@ -20,14 +27,16 @@ interface FilterOptions {
   targetCount?: number;
   /** Whether to apply time-based decay to scores. Defaults to true */
   timeWeight?: boolean;
-  /** Minimum score threshold (0-1). Defaults to 0.1 */
+  /** Minimum score threshold (0-1). Defaults to 0.05 */
   minScore?: number;
+  /** Whether to normalize within asset categories. Defaults to true */
+  categoryNormalization?: boolean;
 }
 
 /**
  * Result of market filtering operation.
  */
-interface FilterResult {
+export interface FilterResult {
   /** Filtered markets */
   markets: ParentMarket[];
   /** Market statistics */
@@ -42,40 +51,82 @@ interface FilterResult {
 
 /**
  * MarketFilter provides functionality to filter and prioritize markets based on
- * various metrics like volume, liquidity, and age. It uses a scoring system
- * that adapts to current market conditions.
+ * various metrics like volume, liquidity, and age. It uses adaptive scoring that
+ * considers both global and asset-specific metrics.
  */
 export class MarketFilter {
   /**
-   * Calculates a market's score based on its metrics and current market conditions.
-   *
-   * @param market - The market to score
-   * @param stats - Current market statistics for normalization
-   * @param timeWeight - Whether to apply time-based weighting
-   * @returns A score between 0 and 1
+   * Determines the asset category of a market
+   */
+  private getMarketCategory(market: ParentMarket): string {
+    const title = market.title.toLowerCase();
+    if (title.includes('bitcoin') || title.includes('btc')) return 'BTC';
+    if (title.includes('ethereum') || title.includes('eth')) return 'ETH';
+    if (title.includes('solana') || title.includes('sol')) return 'SOL';
+    return 'OTHER';
+  }
+
+  /**
+   * Calculates category-specific statistics for all markets
+   */
+  private getCategoryStats(markets: ParentMarket[]): CategoryStats {
+    const categorizedMarkets: { [key: string]: ParentMarket[] } = {};
+
+    // Group markets by category
+    markets.forEach((market) => {
+      const category = this.getMarketCategory(market);
+      if (!categorizedMarkets[category]) {
+        categorizedMarkets[category] = [];
+      }
+      categorizedMarkets[category].push(market);
+    });
+
+    // Calculate stats for each category
+    const categoryStats: CategoryStats = {};
+    Object.entries(categorizedMarkets).forEach(
+      ([category, categoryMarkets]) => {
+        categoryStats[category] = this.getMarketStats(categoryMarkets);
+      }
+    );
+
+    return categoryStats;
+  }
+
+  /**
+   * Calculates a market's score based on its metrics and market conditions.
    */
   private calculateMarketScore(
     market: ParentMarket,
-    stats: MarketStats,
-    timeWeight: boolean = true
+    globalStats: MarketStats,
+    categoryStats: CategoryStats,
+    options: Required<FilterOptions>
   ): number {
-    // Normalize metrics to 0-1 scale to make them comparable
+    const category = this.getMarketCategory(market);
+    const stats =
+      options.categoryNormalization && categoryStats[category]
+        ? categoryStats[category]
+        : globalStats;
+
+    // Normalize metrics to 0-1 scale
     const normalizedVolume = market.volume / stats.volumeMax;
     const normalizedLiquidity = market.liquidity / stats.liquidityMax;
 
     // Adjust weights based on volume distribution
-    // When volume is highly skewed (mean >> median), we give more weight to volume
-    // This helps identify truly significant markets in volatile conditions
     const volumeSkew = stats.volumeMean / stats.volumeMedian;
-    const volumeWeight = volumeSkew > 3 ? 0.7 : 0.5;
+    const volumeWeight = volumeSkew > 3 ? 0.6 : 0.5; // Reduced from 0.7 to 0.6
     const liquidityWeight = 1 - volumeWeight;
 
     // Calculate base score
     let score =
       normalizedVolume * volumeWeight + normalizedLiquidity * liquidityWeight;
 
+    // Add category boost for non-major assets to improve inclusion
+    if (category !== 'BTC' && category !== 'ETH') {
+      score *= 1.2; // 20% boost for non-major assets
+    }
+
     // Apply time weighting if enabled
-    if (timeWeight) {
+    if (options.timeWeight) {
       score *= this.calculateTimeWeight(market.startDate);
     }
 
@@ -84,20 +135,15 @@ export class MarketFilter {
 
   /**
    * Calculates time-based weight for a market based on its age.
-   * Uses exponential decay but maintains a minimum weight for older markets.
    */
   private calculateTimeWeight(startDate: string): number {
     const age = Date.now() - new Date(startDate).getTime();
     const daysOld = age / (1000 * 60 * 60 * 24);
-
-    // 30-day half-life with 0.3 minimum weight
-    // This ensures older markets can still be included if they're significant
     return Math.max(0.3, Math.exp(-daysOld / 30));
   }
 
   /**
    * Calculates various statistical measures for market metrics.
-   * Used to normalize scores and adjust weights based on market conditions.
    */
   private getMarketStats(markets: ParentMarket[]): MarketStats {
     const volumes = markets.map((m) => m.volume);
@@ -108,12 +154,9 @@ export class MarketFilter {
     const median = (arr: number[]) => {
       const sorted = [...arr].sort((a, b) => a - b);
       const mid = Math.floor(sorted.length / 2);
-      // If even length, take average of two middle values
-      if (sorted.length % 2 === 0) {
-        return (sorted[mid - 1] + sorted[mid]) / 2;
-      }
-      // If odd length, take middle value
-      return sorted[mid];
+      return sorted.length % 2 === 0
+        ? (sorted[mid - 1] + sorted[mid]) / 2
+        : sorted[mid];
     };
     const max = (arr: number[]) => Math.max(...arr);
 
@@ -129,10 +172,6 @@ export class MarketFilter {
 
   /**
    * Filters markets based on their significance and current market conditions.
-   *
-   * @param markets - Array of markets to filter
-   * @param options - Filtering options
-   * @returns Filtered markets and market statistics
    */
   filterMarkets(
     markets: ParentMarket[],
@@ -151,35 +190,43 @@ export class MarketFilter {
       };
     }
 
-    const stats = this.getMarketStats(markets);
+    const fullOptions: Required<FilterOptions> = {
+      targetCount: options.targetCount ?? Math.ceil(markets.length * 0.3), // Increased from 0.25 to 0.3
+      timeWeight: options.timeWeight ?? true,
+      minScore: options.minScore ?? 0.05, // Lowered from 0.1 to 0.05
+      categoryNormalization: options.categoryNormalization ?? true,
+    };
+
+    const globalStats = this.getMarketStats(markets);
+    const categoryStats = this.getCategoryStats(markets);
 
     // Score and sort markets
     const marketsWithScores = markets.map((market) => ({
       market,
-      score: this.calculateMarketScore(market, stats, options.timeWeight),
+      score: this.calculateMarketScore(
+        market,
+        globalStats,
+        categoryStats,
+        fullOptions
+      ),
     }));
 
     const sorted = marketsWithScores.sort((a, b) => b.score - a.score);
 
     // Apply filtering
-    const {
-      targetCount = Math.ceil(markets.length * 0.25), // Default to 25% of markets
-      minScore = 0.1, // Minimum significance threshold
-    } = options;
-
     const filtered = sorted
-      .filter((m) => m.score >= minScore)
-      .slice(0, targetCount)
+      .filter((m) => m.score >= fullOptions.minScore)
+      .slice(0, fullOptions.targetCount)
       .map((m) => m.market);
 
     return {
       markets: filtered,
       stats: {
         totalMarkets: markets.length,
-        meanVolume: stats.volumeMean,
-        meanLiquidity: stats.liquidityMean,
-        medianVolume: stats.volumeMedian,
-        medianLiquidity: stats.liquidityMedian,
+        meanVolume: globalStats.volumeMean,
+        meanLiquidity: globalStats.liquidityMean,
+        medianVolume: globalStats.volumeMedian,
+        medianLiquidity: globalStats.liquidityMedian,
       },
     };
   }
