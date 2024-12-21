@@ -5,12 +5,16 @@ import { ReportRepository } from './reports/reports.js';
 import { fetchCryptoMarkets } from './polymarket/polymarket.js';
 import { formatPrompt } from './reports/prompt.js';
 import { DatabaseError, ValidationError, NetworkError } from './errors.js';
+import { MarketFilter } from './markets/market-filter.js';
+import { analyzePredictionMarkets } from './reports/llm.js';
+// import fsp from 'fs/promises';
 
 /**
  * Test script to generate prompt without feeding it to LLM and saving results.
  */
 async function testPrompt() {
   const dbManager = new DatabaseManager();
+  const marketFilter = new MarketFilter();
 
   try {
     if (!dbManager.isHealthy()) {
@@ -22,7 +26,8 @@ async function testPrompt() {
 
     const currentMarkets = await fetchCryptoMarkets();
     if (!currentMarkets?.length) {
-      throw new ValidationError('No market data was fetched', []);
+      logger.warn('No market data fetched. Exiting.');
+      return;
     }
 
     const previousMarkets = await marketRepository.getActiveMarkets();
@@ -30,15 +35,60 @@ async function testPrompt() {
       logger.warn('No previous market data available');
     }
 
-    const latestReport = await reportRepository.getLatest();
-
     logger.info(
-      `Fetched: current markets: ${currentMarkets.length}, previous: ${previousMarkets.length}`
+      `Market data fetched: current markets: ${currentMarkets.length}, previous markets: ${previousMarkets.length}`
     );
 
-    const prompt = formatPrompt(currentMarkets, previousMarkets, latestReport);
-    logger.info('Generated prompt:');
-    logger.info(prompt);
+    const filteredCurrentMarkets = marketFilter.filterMarkets(currentMarkets, {
+      timeWeight: true,
+      minScore: 0.05,
+      categoryNormalization: true,
+    });
+
+    // await fsp.writeFile('currentMarkets.json', JSON.stringify(currentMarkets, null, 2));
+    // await fsp.writeFile('filteredCurrentMarkets.json', JSON.stringify(filteredCurrentMarkets, null, 2));
+
+    const filteredPreviousMarkets = marketFilter.filterMarkets(
+      previousMarkets,
+      {
+        timeWeight: true,
+        targetCount: 15,
+        minScore: 0.1,
+      }
+    );
+
+    // Log filtering statistics
+    logger.info(
+      {
+        current: {
+          total: currentMarkets.length,
+          filtered: filteredCurrentMarkets.markets.length,
+          meanVolume: filteredCurrentMarkets.stats.meanVolume,
+          meanLiquidity: filteredCurrentMarkets.stats.meanLiquidity,
+        },
+        previous: {
+          total: previousMarkets.length,
+          filtered: filteredPreviousMarkets.markets.length,
+          meanVolume: filteredPreviousMarkets.stats.meanVolume,
+          meanLiquidity: filteredPreviousMarkets.stats.meanLiquidity,
+        },
+      },
+      'Market filtering results:'
+    );
+
+    const latestReport = await reportRepository.getLatest();
+    const prompt = formatPrompt(
+      filteredCurrentMarkets,
+      filteredPreviousMarkets,
+      latestReport
+    );
+    logger.info(prompt, 'Generated prompt:');
+
+    const analysis = await analyzePredictionMarkets(prompt);
+
+    if (analysis?.content) {
+      logger.info(analysis.content, 'Analysis completed and saved');
+    }
   } catch (error) {
     let logMessage = 'Test failed';
 
