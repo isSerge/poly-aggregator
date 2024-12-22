@@ -147,17 +147,21 @@ TITLE: ${market.title}
 VOL: $${formatNumber(market.volume)}
 LIQ: $${formatNumber(market.liquidity)}
 CHILDREN:
-${market.childMarkets
-  .map(
-    (child) => `
+${
+  market.childMarkets.length > 0
+    ? market.childMarkets
+        .map(
+          (child) => `
 ID: ${child.id}
 Q: ${child.question}
 OUTCOMES: ${child.outcomes.join(' / ')}
 PRICES: ${child.outcomePrices.join(' / ')}
 VOL: $${formatNumber(child.volume)}
 `
-  )
-  .join('')}
+        )
+        .join('')
+    : 'None'
+}
 ---`;
 }
 

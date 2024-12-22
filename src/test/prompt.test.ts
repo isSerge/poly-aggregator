@@ -25,19 +25,19 @@ describe('Prompt Module', () => {
     };
 
     const expected = `
-- Market ID: market1
-- Title: Market 1
-- Liquidity: 1000
-- Volume: 5000
-- Child Markets:
+MARKET-ID: market1
+TITLE: Market 1
+VOL: $5,000
+LIQ: $1,000
+CHILDREN:
 
--- Market ID: child1
--- Title: What will be the price of BTC in 6 months?
--- Outcomes: $50,000, $60,000
--- Outcome Prices: 0.6, 0.4
--- Volume: 200
+ID: child1
+Q: What will be the price of BTC in 6 months?
+OUTCOMES: $50,000 / $60,000
+PRICES: 0.6 / 0.4
+VOL: $200
 
-------------------
+---
 `;
 
     const formatted = formatMarketForPrompt(mockMarket);
@@ -60,13 +60,13 @@ describe('Prompt Module', () => {
     };
 
     const expected = `
-- Market ID: market2
-- Title: Market 2
-- Liquidity: 800
-- Volume: 4000
-- Child Markets:
+MARKET-ID: market2
+TITLE: Market 2
+VOL: $4,000
+LIQ: $800
+CHILDREN:
 None
-------------------
+---
 `;
 
     const formatted = formatMarketForPrompt(mockMarket);
