@@ -46,11 +46,11 @@ async function testPrompt() {
     });
 
     await fsp.writeFile(
-      'currentMarkets.json',
+      'artifacts/currentMarkets.json',
       JSON.stringify(currentMarkets, null, 2)
     );
     await fsp.writeFile(
-      'filteredCurrentMarkets.json',
+      'artifacts/filteredCurrentMarkets.json',
       JSON.stringify(filteredCurrentMarkets, null, 2)
     );
 
@@ -64,11 +64,11 @@ async function testPrompt() {
     );
 
     await fsp.writeFile(
-      'previousMarkets.json',
+      'artifacts/previousMarkets.json',
       JSON.stringify(previousMarkets, null, 2)
     );
     await fsp.writeFile(
-      'filteredPreviousMarkets.json',
+      'artifacts/filteredPreviousMarkets.json',
       JSON.stringify(filteredPreviousMarkets, null, 2)
     );
     // Log filtering statistics
@@ -98,13 +98,16 @@ async function testPrompt() {
     );
     logger.info(prompt, 'Generated prompt:');
 
-    await fsp.writeFile('prompt.txt', prompt);
+    await fsp.writeFile('artifacts/prompt.txt', prompt);
 
     const analysis = await analyzePredictionMarkets(prompt);
 
     if (analysis?.content) {
       logger.info(analysis.content, 'Analysis completed and saved');
-      await fsp.writeFile('analysis.txt', analysis.content.toString());
+      await fsp.writeFile(
+        'artifacts/analysis.txt',
+        analysis.content.toString()
+      );
     }
   } catch (error) {
     let logMessage = 'Test failed';
