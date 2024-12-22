@@ -7,7 +7,7 @@ import { formatPrompt } from './reports/prompt.js';
 import { DatabaseError, ValidationError, NetworkError } from './errors.js';
 import { MarketFilter } from './markets/market-filter.js';
 import { analyzePredictionMarkets } from './reports/llm.js';
-// import fsp from 'fs/promises';
+import fsp from 'fs/promises';
 
 /**
  * Test script to generate prompt without feeding it to LLM and saving results.
@@ -45,8 +45,14 @@ async function testPrompt() {
       categoryNormalization: true,
     });
 
-    // await fsp.writeFile('currentMarkets.json', JSON.stringify(currentMarkets, null, 2));
-    // await fsp.writeFile('filteredCurrentMarkets.json', JSON.stringify(filteredCurrentMarkets, null, 2));
+    await fsp.writeFile(
+      'currentMarkets.json',
+      JSON.stringify(currentMarkets, null, 2)
+    );
+    await fsp.writeFile(
+      'filteredCurrentMarkets.json',
+      JSON.stringify(filteredCurrentMarkets, null, 2)
+    );
 
     const filteredPreviousMarkets = marketFilter.filterMarkets(
       previousMarkets,
@@ -57,6 +63,14 @@ async function testPrompt() {
       }
     );
 
+    await fsp.writeFile(
+      'previousMarkets.json',
+      JSON.stringify(previousMarkets, null, 2)
+    );
+    await fsp.writeFile(
+      'filteredPreviousMarkets.json',
+      JSON.stringify(filteredPreviousMarkets, null, 2)
+    );
     // Log filtering statistics
     logger.info(
       {
@@ -84,10 +98,13 @@ async function testPrompt() {
     );
     logger.info(prompt, 'Generated prompt:');
 
+    await fsp.writeFile('prompt.txt', prompt);
+
     const analysis = await analyzePredictionMarkets(prompt);
 
     if (analysis?.content) {
       logger.info(analysis.content, 'Analysis completed and saved');
+      await fsp.writeFile('analysis.txt', analysis.content.toString());
     }
   } catch (error) {
     let logMessage = 'Test failed';
