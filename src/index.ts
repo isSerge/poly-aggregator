@@ -7,7 +7,7 @@ import { TelegramService } from './telegram/telegram.js';
 const telegramService = new TelegramService();
 
 async function startup() {
-  telegramService.start();
+  await telegramService.start();
 
   cron.schedule(config.CRON_SCHEDULE, () => main(telegramService));
   await main(telegramService);
