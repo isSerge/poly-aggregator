@@ -2,18 +2,21 @@ import { Telegraf } from 'telegraf';
 import { logger } from '../logger.js';
 import { config } from '../config.js';
 import { TelegramError } from '../errors.js';
+import { SubscriberRepository } from './subscribers.js';
 
 export class TelegramService {
   private readonly bot: Telegraf;
-  private readonly subscribers: Set<number>;
+  private readonly subscriberRepository: SubscriberRepository;
 
-  constructor() {
+  constructor(subscriberRepository: SubscriberRepository) {
+    this.subscriberRepository = subscriberRepository;
+
     try {
       this.bot = new Telegraf(config.TELEGRAM_BOT_TOKEN);
     } catch (error) {
       throw TelegramError.from(error, 'Failed to initialize Telegram bot');
     }
-    this.subscribers = new Set();
+
     this.setupCommands();
   }
 
@@ -21,7 +24,7 @@ export class TelegramService {
     this.bot.command('start', async (ctx) => {
       try {
         const chatId = ctx.chat.id;
-        this.subscribers.add(chatId);
+        this.subscriberRepository.addSubscriber(chatId);
         await ctx.reply(
           'Welcome to Crypto Markets Bot! You will now receive market analysis updates.'
         );
@@ -38,7 +41,7 @@ export class TelegramService {
     this.bot.command('stop', async (ctx) => {
       try {
         const chatId = ctx.chat.id;
-        this.subscribers.delete(chatId);
+        this.subscriberRepository.removeSubscriber(chatId);
         await ctx.reply('You have unsubscribed from market analysis updates.');
         logger.info(`Subscriber removed: ${chatId}`);
       } catch (error) {
@@ -59,9 +62,10 @@ export class TelegramService {
   }
 
   public async broadcastReport(report: string): Promise<void> {
+    const chatIds = this.subscriberRepository.getSubscribers();
     const failedDeliveries: number[] = [];
 
-    for (const chatId of this.subscribers) {
+    for (const chatId of chatIds) {
       try {
         await this.bot.telegram.sendMessage(chatId, report);
         logger.info(`Report sent to subscriber ${chatId}`);
@@ -69,7 +73,7 @@ export class TelegramService {
         failedDeliveries.push(chatId);
 
         if (this.isChatNotFoundError(error)) {
-          this.subscribers.delete(chatId);
+          this.subscriberRepository.removeSubscriber(chatId);
           logger.info(`Removed inactive subscriber: ${chatId}`);
         } else {
           logger.error(error, `Failed to send message to chat ${chatId}:`);
@@ -113,7 +117,7 @@ export class TelegramService {
         logger.info('Telegram bot launched successfully.');
       })
       .catch((error) => {
-        logger.error('Failed to start Telegram bot:', error);
+        logger.error(error, 'Failed to start Telegram bot:');
         throw TelegramError.from(error, 'Failed to start Telegram bot');
       });
   }

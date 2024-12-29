@@ -3,28 +3,74 @@ import { main } from './main.js';
 import { config } from './config.js';
 import { logger } from './logger.js';
 import { TelegramService } from './telegram/telegram.js';
+import { DatabaseManager } from './db/db.js';
+import { MarketRepository } from './markets/markets.js';
+import { MarketFilter } from './markets/market-filter.js';
+import { ReportRepository } from './reports/reports.js';
+import { SubscriberRepository } from './telegram/subscribers.js';
+import { DatabaseError } from './errors.js';
 
-const telegramService = new TelegramService();
+function createDependencies() {
+  const dbManager = new DatabaseManager();
 
-async function startup() {
-  await telegramService.start();
+  if (!dbManager.isHealthy()) {
+    throw new DatabaseError('Database connection is not healthy');
+  }
 
-  cron.schedule(config.CRON_SCHEDULE, () => main(telegramService));
-  await main(telegramService);
+  const marketRepository = new MarketRepository(dbManager);
+  const reportRepository = new ReportRepository(dbManager);
+  const marketFilter = new MarketFilter();
+  const subscriberRepository = new SubscriberRepository(dbManager);
+  const telegramService = new TelegramService(subscriberRepository);
+
+  return {
+    dbManager,
+    telegramService,
+    marketRepository,
+    reportRepository,
+    marketFilter,
+  };
 }
 
-// Handle graceful shutdown
-process.once('SIGINT', () => {
-  telegramService.stop();
-  process.exit(0);
-});
+async function startup() {
+  const dependencies = createDependencies();
+  const { telegramService, dbManager } = dependencies;
 
-process.once('SIGTERM', () => {
-  telegramService.stop();
-  process.exit(0);
-});
+  try {
+    logger.info('Starting application...');
+    await telegramService.start();
+    logger.info('Telegram service started.');
+
+    cron.schedule(config.CRON_SCHEDULE, () => {
+      logger.info('Cron job started');
+      main(dependencies).catch((error) => {
+        logger.error(error, 'Cron job failed:');
+      });
+    });
+
+    await main(dependencies);
+    logger.info('Initial run completed.');
+  } catch (error) {
+    logger.error(error, 'Startup failed:');
+    throw error;
+  }
+
+  // Handle graceful shutdown
+  const shutdown = async (exitCode = 0) => {
+    try {
+      telegramService.stop();
+      dbManager.close();
+      logger.info('Application shutdown complete.');
+    } finally {
+      process.exit(exitCode);
+    }
+  };
+
+  process.once('SIGINT', () => shutdown(0));
+  process.once('SIGTERM', () => shutdown(0));
+}
 
 startup().catch((error) => {
-  logger.error('Startup failed:', error);
+  logger.error(error, 'Critical startup error:');
   process.exit(1);
 });

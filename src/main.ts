@@ -5,27 +5,28 @@ import {
   NetworkError,
   TelegramError,
 } from './errors.js';
-import { DatabaseManager } from './db/db.js';
 import { fetchCryptoMarkets } from './polymarket/polymarket.js';
-import { MarketRepository } from './markets/markets.js';
-import { MarketFilter } from './markets/market-filter.js';
 import { analyzePredictionMarkets } from './reports/llm.js';
-import { ReportRepository } from './reports/reports.js';
 import { formatPrompt } from './reports/prompt.js';
 import { TelegramService } from './telegram/telegram.js';
+import { MarketRepository } from './markets/markets.js';
+import { MarketFilter } from './markets/market-filter.js';
+import { ReportRepository } from './reports/reports.js';
 
-export async function main(telegramService: TelegramService) {
-  const dbManager = new DatabaseManager();
-  const marketFilter = new MarketFilter();
+interface MainDependencies {
+  telegramService: TelegramService;
+  marketRepository: MarketRepository;
+  reportRepository: ReportRepository;
+  marketFilter: MarketFilter;
+}
 
+export async function main({
+  telegramService,
+  marketRepository,
+  reportRepository,
+  marketFilter,
+}: MainDependencies) {
   try {
-    if (!dbManager.isHealthy()) {
-      throw new DatabaseError('Database connection is not healthy');
-    }
-
-    const marketRepository = new MarketRepository(dbManager);
-    const reportRepository = new ReportRepository(dbManager);
-
     // 1. Fetch current market data
     const currentMarkets = await fetchCryptoMarkets();
 
@@ -113,7 +114,5 @@ export async function main(telegramService: TelegramService) {
 
     logger.error(error, logMessage);
     throw error;
-  } finally {
-    dbManager.close();
   }
 }
