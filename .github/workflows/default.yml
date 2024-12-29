@@ -26,6 +26,7 @@ jobs:
           NODE_ENV: test
           GAMMA_API_URL: ${{ secrets.GAMMA_API_URL }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
   build:
     needs: test
