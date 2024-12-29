@@ -86,3 +86,38 @@ export function isErrorType<T extends Error>(
 ): error is T {
   return error instanceof errorType;
 }
+
+export class TelegramError extends Error {
+  constructor(
+    message: string,
+    public readonly code?: string,
+    public readonly cause?: unknown
+  ) {
+    super(message);
+    this.name = 'TelegramError';
+  }
+
+  static from(error: unknown, context?: string): TelegramError {
+    if (error instanceof TelegramError) {
+      return error;
+    }
+
+    // Handle Telegraf specific errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      const telegramError = error as { code: string; message?: string };
+      const message = context
+        ? `${context}: ${telegramError.message || 'Unknown telegram error'}`
+        : telegramError.message || 'Unknown telegram error';
+
+      return new TelegramError(message, telegramError.code, error);
+    }
+
+    const message = context
+      ? `${context}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      : error instanceof Error
+        ? error.message
+        : 'Unknown error';
+
+    return new TelegramError(message, undefined, error);
+  }
+}

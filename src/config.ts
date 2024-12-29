@@ -11,6 +11,7 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string(),
   CRON_SCHEDULE: z.string().default('0 */12 * * *'), // Every 12 hours
   DB_PATH: z.string().default('./data/database.db'),
+  TELEGRAM_BOT_TOKEN: z.string(),
 });
 
 export const config = envSchema.parse(process.env);
