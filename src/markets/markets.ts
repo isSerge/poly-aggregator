@@ -134,7 +134,7 @@ export class MarketRepository {
 
     try {
       transaction(currentMarkets);
-      logger.info('Successfully saved markets and removed closed markets');
+      logger.info('Successfully updated markets');
     } catch (error) {
       const dbError =
         error instanceof DatabaseError

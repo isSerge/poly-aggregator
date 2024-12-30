@@ -111,15 +111,11 @@ export class TelegramService {
   }
 
   public async start(): Promise<void> {
-    this.bot
-      .launch()
-      .then(() => {
-        logger.info('Telegram bot launched successfully.');
-      })
-      .catch((error) => {
-        logger.error(error, 'Failed to start Telegram bot:');
-        throw TelegramError.from(error, 'Failed to start Telegram bot');
-      });
+    logger.info('Starting Telegram bot...');
+    this.bot.launch().catch((error) => {
+      logger.error(error, 'Failed to start Telegram bot:');
+      throw TelegramError.from(error, 'Failed to start Telegram bot');
+    });
   }
 
   public stop(): void {

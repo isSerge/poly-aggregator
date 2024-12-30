@@ -39,7 +39,6 @@ async function startup() {
   try {
     logger.info('Starting application...');
     await telegramService.start();
-    logger.info('Telegram service started.');
 
     cron.schedule(config.CRON_SCHEDULE, () => {
       logger.info('Cron job started');
@@ -49,7 +48,6 @@ async function startup() {
     });
 
     await main(dependencies);
-    logger.info('Initial run completed.');
   } catch (error) {
     logger.error(error, 'Startup failed:');
     throw error;
