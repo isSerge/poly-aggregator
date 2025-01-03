@@ -8,6 +8,7 @@
     "start": "node dist/index.js",
     "build": "tsc && copyfiles -f src/db/*.sql dist/db/",
     "dev": "tsx watch src/index.ts",
+    "test-prompt": "tsx watch src/testPrompt.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.ts\"",

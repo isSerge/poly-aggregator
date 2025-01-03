@@ -27,6 +27,7 @@ jobs:
           GAMMA_API_URL: ${{ secrets.GAMMA_API_URL }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
 
   build:
     needs: test

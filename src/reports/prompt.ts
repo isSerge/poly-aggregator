@@ -4,6 +4,7 @@ import { FilterResult } from '../markets/market-filter.js';
 export function formatPrompt(
   currentMarkets: FilterResult,
   previousMarkets: FilterResult,
+  currentPrices: string | null,
   latestReport: string | null
 ): string {
   const now = new Date();
@@ -129,6 +130,12 @@ Example:
 Do not include any notes.
 
 REFERENCE DATA:
+${
+  currentPrices &&
+  `CURRENT PRICES:
+${currentPrices}`
+}
+
 CURRENT MARKET DATA:
 ${currentMarkets.markets.map(formatMarketForPrompt).join('\n')}
 

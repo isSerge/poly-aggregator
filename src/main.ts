@@ -12,6 +12,7 @@ import { TelegramService } from './telegram/telegram.js';
 import { MarketRepository } from './markets/markets.js';
 import { MarketFilter } from './markets/market-filter.js';
 import { ReportRepository } from './reports/reports.js';
+import { fetchCryptoPrices } from './coinmarketcap/coinmarketcap.js';
 
 interface MainDependencies {
   telegramService: TelegramService;
@@ -83,9 +84,14 @@ export async function main({
 
     // 4. Generate and save analysis
     const latestReport = await reportRepository.getLatest();
+
+    const symbols = ['BTC', 'ETH', 'SOL'];
+    const prices = await fetchCryptoPrices(symbols);
+
     const prompt = formatPrompt(
       filteredCurrentMarkets,
       filteredPreviousMarkets,
+      prices,
       latestReport
     );
 

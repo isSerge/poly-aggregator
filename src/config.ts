@@ -12,6 +12,7 @@ const envSchema = z.object({
   CRON_SCHEDULE: z.string().default('0 */12 * * *'), // Every 12 hours
   DB_PATH: z.string().default('./data/database.db'),
   TELEGRAM_BOT_TOKEN: z.string(),
+  COINMARKETCAP_API_KEY: z.string(),
 });
 
 export const config = envSchema.parse(process.env);
