@@ -10,7 +10,7 @@ import { ReportRepository } from './reports/reports.js';
 import { SubscriberRepository } from './telegram/subscribers.js';
 import { DatabaseError } from './errors.js';
 
-export function createDependencies() {
+function createDependencies() {
   const dbManager = new DatabaseManager();
 
   if (!dbManager.isHealthy()) {

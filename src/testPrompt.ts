@@ -1,11 +1,33 @@
+import fsp from 'fs/promises';
 import { logger } from './logger.js';
 import { fetchCryptoMarkets } from './polymarket/polymarket.js';
 import { formatPrompt } from './reports/prompt.js';
 import { DatabaseError, ValidationError, NetworkError } from './errors.js';
 import { analyzePredictionMarkets } from './reports/llm.js';
-import fsp from 'fs/promises';
-import { createDependencies } from './index.js';
 import { fetchCryptoPrices } from './coinmarketcap/coinmarketcap.js';
+import { MarketRepository } from './markets/markets.js';
+import { MarketFilter } from './markets/market-filter.js';
+import { ReportRepository } from './reports/reports.js';
+import { DatabaseManager } from './db/db.js';
+
+function createDependencies() {
+  const dbManager = new DatabaseManager();
+
+  if (!dbManager.isHealthy()) {
+    throw new DatabaseError('Database connection is not healthy');
+  }
+
+  const marketRepository = new MarketRepository(dbManager);
+  const reportRepository = new ReportRepository(dbManager);
+  const marketFilter = new MarketFilter();
+
+  return {
+    dbManager,
+    marketRepository,
+    reportRepository,
+    marketFilter,
+  };
+}
 
 /**
  * Test script to generate prompt without feeding it to LLM and saving results.
