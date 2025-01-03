@@ -20,6 +20,8 @@ src
 ├── main.ts                # Main entry point for market analysis
 ├── index.ts               # Application startup and initialization
 ├── config.ts              # Environment configuration
+├── coinmarketcap/         # Coinmarketcap API integration
+│   ├── coinmarketcap.ts   # Fetch current prices for majors
 ├── db/                    # Database management
 │   ├── db.ts              # SQLite connection and management
 │   ├── schema.sql         # Database schema
@@ -79,6 +81,7 @@ src
    GEMINI_API_KEY=<your_gemini_api_key>
    DB_PATH=./data/database.db
    CRON_SCHEDULE=0 */12 * * * # Every 12 hours
+   COINMARKETCAP_API_KEY=<your_coinmarketcap_api_key>
    ```
 
 ---
