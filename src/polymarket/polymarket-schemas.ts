@@ -40,8 +40,8 @@ const ApiChildMarketSchema = z.object({
   startDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: 'Invalid date format for startDate',
   }),
-  image: z.string().url(),
-  icon: z.string().url(),
+  image: z.string().optional(),
+  icon: z.string().optional(),
   description: z.string(),
   outcomes: z.string().transform((str) => JSON.parse(str) as string[]),
   outcomePrices: z.string().transform((str) => JSON.parse(str) as string[]),
